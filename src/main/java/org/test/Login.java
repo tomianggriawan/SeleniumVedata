@@ -2,6 +2,8 @@ package org.test;
 
 import org.openqa.selenium.By;
 
+import java.time.Duration;
+
 import static org.test.common.WebDriverTools.baseUrl;
 import static org.test.common.WebDriverTools.chrome;
 
@@ -30,12 +32,12 @@ public class Login {
         chrome.findElement(By.id("input-2")).click();
 
         boolean emailValidation = chrome.findElement(By.xpath("//*[text()='E-mail wajib diisi']")).isDisplayed();
-        System.out.println("Password Validation: " + emailValidation);
+        System.out.println("Email Validation: " + emailValidation);
 
-        chrome.findElement(By.tagName("input")).click();
+        chrome.findElement(By.xpath("//*[text()='Password']")).click();
 
         boolean passwordValidation = chrome.findElement(By.xpath("//*[text()='Password wajib diisi']")).isDisplayed();
-        System.out.println("Email Validation: " + passwordValidation);
+        System.out.println("Password Validation: " + passwordValidation);
 
         String title = chrome.getTitle();
         if (title.equals("VEDATA")){
@@ -43,6 +45,13 @@ public class Login {
         } else {
             System.out.println("TEST FAILED");
         }
+
+        chrome.findElement(By.id("input-0")).sendKeys("tomy@admin.info");
+        chrome.findElement(By.id("input-2")).sendKeys("rahasia");
+        chrome.findElement(By.xpath("//button[@type = 'submit']")).click();
+
+        boolean dashboardDisplayed = chrome.findElement(By.xpath("//span[@class='text-h5' and @xpath='1']")).isDisplayed();
+        System.out.println("Dashboard Displayed: " + dashboardDisplayed);
 
 //        chrome.close();
     }

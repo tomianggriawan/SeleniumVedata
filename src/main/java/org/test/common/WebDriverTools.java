@@ -7,5 +7,5 @@ import org.openqa.selenium.firefox.FirefoxDriver;
 public class WebDriverTools {
 
     public static WebDriver chrome = new ChromeDriver();
-    public static String baseUrl = "http://172.11.12.233:3000/dashboard";
+    public static String baseUrl = "https://web.vedata.id/";
 }

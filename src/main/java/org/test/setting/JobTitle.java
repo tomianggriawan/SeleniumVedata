@@ -1,5 +1,6 @@
 package org.test.setting;
 
+import org.openqa.selenium.WebDriver;
 import org.test.common.BasePage;
 import org.test.pages.DashboardPage;
 import org.test.pages.JobTitlePage;
@@ -12,64 +13,68 @@ import static org.test.common.WebDriverTools.chrome;
 
 /**
  * JobTitle - Vanilla Java CRU Test Runner for HCM > Setting > Job Title.
- *
- * Skenario Test (sequential flow via main method):
- *   1. [CREATE] - Add new Job Title with auto-generated Code & Name
- *   2. [READ]   - Verify the created record appears in the table
- *   3. [UPDATE] - Edit the record's Name, save, and verify the change
- *
- * Data Generation: UUID + System.currentTimeMillis() for unique values.
- * No TestNG/JUnit dependencies.
+ * Menggunakan POM + fluent interface (method chaining).
  */
-public class JobTitle {
+public class JobTitle extends BasePage {
 
-    private static LoginPage loginPage;
-    private static DashboardPage dashboardPage;
-    private static JobTitlePage jobTitlePage;
+    private final JobTitlePage jobTitlePage;
 
-    // Test data — auto-generated unique values
-    private static String generatedCode;
-    private static String generatedName;
-    private static String updatedName;
+    // Test data — auto-generated unique values per instance
+    private final String generatedCode;
+    private final String generatedName;
+    private final String updatedName;
+
+    /**
+     * Constructor untuk inisialisasi driver dan mempersiapkan test data unik.
+     * State driver dipertahankan agar tidak hilang saat method chaining.
+     */
+    public JobTitle(WebDriver driver) {
+        super(driver);
+        this.jobTitlePage = new JobTitlePage(driver);
+        
+        String[] retailTitles = {
+            "Store Manager", "Assistant Store Manager", "Cashier", "Sales Associate",
+            "Merchandiser", "Stock Clerk", "Customer Service Specialist", "Inventory Associate",
+            "Retail Sales Consultant", "Visual Merchandiser"
+        };
+        java.util.Random rand = new java.util.Random();
+        String title = retailTitles[rand.nextInt(retailTitles.length)];
+        
+        this.generatedCode = "JT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        this.generatedName = title + " " + (rand.nextInt(9000) + 1000);
+        this.updatedName   = "Senior " + title + " " + (rand.nextInt(9000) + 1000);
+    }
+
+    public String getGeneratedCode() {
+        return this.generatedCode;
+    }
 
     public static void main(String[] args) {
         try {
-            // ======================== SETUP ========================
+            LoginPage loginPage = new LoginPage(chrome);
+            chrome.get(baseUrl);
+            chrome.manage().window().maximize();
 
             System.out.println("========================================");
             System.out.println("  JOB TITLE CRU - VEDATA HCM");
             System.out.println("========================================\n");
 
-            loginPage = new LoginPage(chrome);
-            chrome.get(baseUrl);
-            chrome.manage().window().maximize();
-
             loginPage.login("tomi@tester.com", "1234");
-            sleep(4000);
+            Thread.sleep(4000);
 
-            dashboardPage = new DashboardPage(chrome);
-            jobTitlePage = dashboardPage.navigateToJobTitlePage();
+            // Navigasi awal
+            new DashboardPage(chrome).navigateToJobTitlePage();
 
-            generatedCode = "JT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-            generatedName = "Auto Test " + System.currentTimeMillis();
-            updatedName   = "Updated " + System.currentTimeMillis();
-
-            System.out.println("  [DATA] Generated Code : " + generatedCode);
-            System.out.println("  [DATA] Generated Name : " + generatedName);
-            System.out.println("  [DATA] Updated Name   : " + updatedName);
+            // Memulai method chaining / fluent test execution
+            JobTitle test = new JobTitle(chrome);
+            System.out.println("  [DATA] Generated Code : " + test.generatedCode);
+            System.out.println("  [DATA] Generated Name : " + test.generatedName);
+            System.out.println("  [DATA] Updated Name   : " + test.updatedName);
             System.out.println();
 
-            // ======================== CREATE ========================
-
-            testCreateJobTitle();
-
-            // ======================== READ ==========================
-
-            testReadJobTitle();
-
-            // ======================== UPDATE ========================
-
-            testUpdateJobTitle();
+            test.testCreateJobTitle()
+                .testReadJobTitle()
+                .testUpdateJobTitle();
 
             System.out.println("\n========================================");
             System.out.println("  SEMUA TEST CRU SELESAI");
@@ -90,15 +95,14 @@ public class JobTitle {
             }
             e.printStackTrace();
         } finally {
-            // ======================== TEARDOWN ========================
             chrome.quit();
         }
     }
 
     // ==================== CREATE ====================
 
-    private static void testCreateJobTitle() {
-        BasePage.printTestHeader("TEST CREATE: Tambah Job Title Baru");
+    public JobTitle testCreateJobTitle() {
+        printTestHeader("TEST CREATE: Tambah Job Title Baru");
 
         System.out.println("  [STEP] Verifikasi halaman Job Title List...");
         jobTitlePage.verifyPageLoaded();
@@ -125,12 +129,13 @@ public class JobTitle {
         }
         System.out.println("  [PASS] Job Title '" + generatedCode + "' berhasil dibuat dan muncul di tabel");
         System.out.println();
+        return this;
     }
 
     // ==================== READ ====================
 
-    private static void testReadJobTitle() {
-        BasePage.printTestHeader("TEST READ: Verifikasi Data Job Title di Tabel");
+    public JobTitle testReadJobTitle() {
+        printTestHeader("TEST READ: Verifikasi Data Job Title di Tabel");
 
         jobTitlePage.verifyPageLoaded();
 
@@ -165,12 +170,13 @@ public class JobTitle {
         }
 
         System.out.println();
+        return this;
     }
 
     // ==================== UPDATE ====================
 
-    private static void testUpdateJobTitle() {
-        BasePage.printTestHeader("TEST UPDATE: Edit Nama Job Title");
+    public JobTitle testUpdateJobTitle() {
+        printTestHeader("TEST UPDATE: Edit Nama Job Title");
 
         System.out.println("  [STEP] Klik Edit untuk Code '" + generatedCode + "'...");
         jobTitlePage.clickEditJobTitle(generatedCode);
@@ -207,15 +213,6 @@ public class JobTitle {
         }
 
         System.out.println();
-    }
-
-    // ==================== Helper ====================
-
-    private static void sleep(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        return this;
     }
 }

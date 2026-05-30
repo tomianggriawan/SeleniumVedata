@@ -1,5 +1,6 @@
 package org.test.setting;
 
+import org.openqa.selenium.WebDriver;
 import org.test.common.BasePage;
 import org.test.pages.DashboardPage;
 import org.test.pages.LoginPage;
@@ -11,24 +12,23 @@ import static org.test.common.WebDriverTools.chrome;
 /**
  * Service - Test Runner untuk HCM > Setting > Service.
  * Menggunakan POM + fluent interface (method chaining).
- *
- * Skenario Test:
- *   1. Verifikasi halaman Service tampil
- *   2. Verifikasi judul halaman
- *   3. Verifikasi section "Produk yang sedang dipakai / subscribe" tampil
- *   4. Verifikasi section "Produk yang tersedia" tampil
- *   5. Verifikasi tab "Product" tampil
- *   6. Verifikasi tab "Billing" tampil
- *   7. Verifikasi input pencarian layanan tampil
- *   8. Verifikasi tombol "Request" tersedia
  */
-public class Service {
+public class Service extends BasePage {
 
-    private static LoginPage loginPage;
+    private final ServicePage page;
+
+    /**
+     * Constructor untuk inisialisasi driver dan objek halaman ServicePage.
+     * State driver dipertahaman agar tidak hilang saat method chaining.
+     */
+    public Service(WebDriver driver) {
+        super(driver);
+        this.page = new ServicePage(driver);
+    }
 
     public static void main(String[] args) {
         try {
-            loginPage = new LoginPage(chrome);
+            LoginPage loginPage = new LoginPage(chrome);
 
             chrome.get(baseUrl);
             chrome.manage().window().maximize();
@@ -41,16 +41,18 @@ public class Service {
             Thread.sleep(4000);
 
             // Navigasi sekali saja di awal untuk kestabilan sesi SPA
-            ServicePage servicePage = new DashboardPage(chrome).navigateToServicePage();
+            new DashboardPage(chrome).navigateToServicePage();
 
-            testServicePageLoaded(servicePage);
-            testServicePageTitle(servicePage);
-            testServiceSubscribedSection(servicePage);
-            testServiceAvailableSection(servicePage);
-            testServiceProductTab(servicePage);
-            testServiceBillingTab(servicePage);
-            testServiceSearchInput(servicePage);
-            testServiceRequestButton(servicePage);
+            // Memulai method chaining / fluent test execution
+            new Service(chrome)
+                .testServicePageLoaded()
+                .testServicePageTitle()
+                .testServiceSubscribedSection()
+                .testServiceAvailableSection()
+                .testServiceProductTab()
+                .testServiceBillingTab()
+                .testServiceSearchInput()
+                .testServiceRequestButton();
 
             System.out.println("\n========================================");
             System.out.println("  SEMUA TEST SERVICE SELESAI");
@@ -74,83 +76,91 @@ public class Service {
         }
     }
 
-    public static void testServicePageLoaded(ServicePage page) {
-        BasePage.printTestHeader("Test 1: Verifikasi Halaman Service Tampil");
+    public Service testServicePageLoaded() {
+        printTestHeader("Test 1: Verifikasi Halaman Service Tampil");
         try {
             page.verifyPageLoaded();
         } catch (Exception e) {
-            BasePage.printFail("Halaman Service tampil", e.getMessage());
+            printFail("Halaman Service tampil", e.getMessage());
         }
         System.out.println();
+        return this;
     }
 
-    public static void testServicePageTitle(ServicePage page) {
-        BasePage.printTestHeader("Test 2: Verifikasi Judul Halaman Service");
+    public Service testServicePageTitle() {
+        printTestHeader("Test 2: Verifikasi Judul Halaman Service");
         try {
             page.verifyPageTitle();
         } catch (Exception e) {
-            BasePage.printFail("Judul halaman Service", e.getMessage());
+            printFail("Judul halaman Service", e.getMessage());
         }
         System.out.println();
+        return this;
     }
 
-    public static void testServiceSubscribedSection(ServicePage page) {
-        BasePage.printTestHeader("Test 3: Verifikasi Section 'Produk yang sedang dipakai / subscribe'");
+    public Service testServiceSubscribedSection() {
+        printTestHeader("Test 3: Verifikasi Section 'Produk yang sedang dipakai / subscribe'");
         try {
             page.verifySubscribedSectionDisplayed();
         } catch (Exception e) {
-            BasePage.printFail("Section 'Produk yang sedang dipakai'", e.getMessage());
+            printFail("Section 'Produk yang sedang dipakai'", e.getMessage());
         }
         System.out.println();
+        return this;
     }
 
-    public static void testServiceAvailableSection(ServicePage page) {
-        BasePage.printTestHeader("Test 4: Verifikasi Section 'Produk yang tersedia'");
+    public Service testServiceAvailableSection() {
+        printTestHeader("Test 4: Verifikasi Section 'Produk yang tersedia'");
         try {
             page.verifyAvailableSectionDisplayed();
         } catch (Exception e) {
-            BasePage.printFail("Section 'Produk yang tersedia'", e.getMessage());
+            printFail("Section 'Produk yang tersedia'", e.getMessage());
         }
         System.out.println();
+        return this;
     }
 
-    public static void testServiceProductTab(ServicePage page) {
-        BasePage.printTestHeader("Test 5: Verifikasi Tab 'Product' Tampil");
+    public Service testServiceProductTab() {
+        printTestHeader("Test 5: Verifikasi Tab 'Product' Tampil");
         try {
             page.verifyProductTabDisplayed();
         } catch (Exception e) {
-            BasePage.printFail("Tab Product di halaman Service", e.getMessage());
+            printFail("Tab Product di halaman Service", e.getMessage());
         }
         System.out.println();
+        return this;
     }
 
-    public static void testServiceBillingTab(ServicePage page) {
-        BasePage.printTestHeader("Test 6: Verifikasi Tab 'Billing' Tampil");
+    public Service testServiceBillingTab() {
+        printTestHeader("Test 6: Verifikasi Tab 'Billing' Tampil");
         try {
             page.verifyBillingTabDisplayed();
         } catch (Exception e) {
-            BasePage.printFail("Tab Billing di halaman Service", e.getMessage());
+            printFail("Tab Billing di halaman Service", e.getMessage());
         }
         System.out.println();
+        return this;
     }
 
-    public static void testServiceSearchInput(ServicePage page) {
-        BasePage.printTestHeader("Test 7: Verifikasi Input Pencarian Layanan Tampil");
+    public Service testServiceSearchInput() {
+        printTestHeader("Test 7: Verifikasi Input Pencarian Layanan Tampil");
         try {
             page.verifySearchInputDisplayed();
         } catch (Exception e) {
-            BasePage.printFail("Input pencarian layanan", e.getMessage());
+            printFail("Input pencarian layanan", e.getMessage());
         }
         System.out.println();
+        return this;
     }
 
-    public static void testServiceRequestButton(ServicePage page) {
-        BasePage.printTestHeader("Test 8: Verifikasi Tombol 'Request' Tersedia");
+    public Service testServiceRequestButton() {
+        printTestHeader("Test 8: Verifikasi Tombol 'Request' Tersedia");
         try {
             page.verifyRequestButtonDisplayed();
         } catch (Exception e) {
-            BasePage.printFail("Tombol Request di halaman Service", e.getMessage());
+            printFail("Tombol Request di halaman Service", e.getMessage());
         }
         System.out.println();
+        return this;
     }
 }

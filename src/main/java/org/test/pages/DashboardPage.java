@@ -153,8 +153,7 @@ public class DashboardPage extends BasePage {
      */
     public CompanyPage navigateToCompanyPage() {
         navigateTo("https://web.vedata.id/hcm/setting/company");
-        // Tunggu halaman selesai dimuat sebelum menyerahkan kontrol ke CompanyPage
-        try { Thread.sleep(3000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        waitForPageReady("https://web.vedata.id/hcm/setting/company", 3000);
         return new CompanyPage(driver);
     }
 
@@ -163,7 +162,7 @@ public class DashboardPage extends BasePage {
      */
     public JobTitlePage navigateToJobTitlePage() {
         navigateTo("https://web.vedata.id/hcm/setting/job-title");
-        try { Thread.sleep(3000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        waitForPageReady("https://web.vedata.id/hcm/setting/job-title", 3000);
         return new JobTitlePage(driver);
     }
 
@@ -172,7 +171,7 @@ public class DashboardPage extends BasePage {
      */
     public UserPage navigateToUserPage() {
         navigateTo("https://web.vedata.id/hcm/setting/user");
-        try { Thread.sleep(3000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        waitForPageReady("https://web.vedata.id/hcm/setting/user", 3000);
         return new UserPage(driver);
     }
 
@@ -181,7 +180,7 @@ public class DashboardPage extends BasePage {
      */
     public AccessRightsPage navigateToAccessRightsPage() {
         navigateTo("https://web.vedata.id/hcm/setting/access-rights");
-        try { Thread.sleep(3000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        waitForPageReady("https://web.vedata.id/hcm/setting/access-rights", 3000);
         return new AccessRightsPage(driver);
     }
 
@@ -191,7 +190,58 @@ public class DashboardPage extends BasePage {
     public ServicePage navigateToServicePage() {
         navigateTo("https://web.vedata.id/hcm/setting/service");
         // Service page butuh lebih banyak waktu untuk memuat data produk dari API
-        try { Thread.sleep(7000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        waitForPageReady("https://web.vedata.id/hcm/setting/service", 7000);
         return new ServicePage(driver);
     }
+
+    /**
+     * Navigasi ke halaman HCM > Employee > Profile dan kembalikan EmployeePage.
+     * Halaman ini memerlukan waktu ekstra karena me-load data karyawan dari API.
+     */
+    public EmployeePage navigateToEmployeeProfilePage() {
+        navigateTo("https://web.vedata.id/hcm/employee/profile");
+        waitForPageReady("https://web.vedata.id/hcm/employee/profile", 5000);
+        return new EmployeePage(driver);
+    }
+
+    /**
+     * Tunggu hingga halaman target benar-benar siap setelah navigasi.
+     *
+     * Strategi:
+     *   1. Jika URL masih berupa Keycloak OAuth callback (mengandung #code= & session_state=),
+     *      navigasikan ulang ke targetUrl untuk memaksa SPA merender halaman tanpa fragment.
+     *   2. Tunggu hingga sidebar (leftSidebar) muncul, memastikan sesi aktif dan halaman ter-render.
+     *   3. Jika sidebar tidak muncul dalam 15 detik, log warning dan lanjutkan (soft-fail).
+     *   4. Berikan extra sleep sesuai parameter extraSleepMs setelah sidebar terdeteksi.
+     *
+     * @param targetUrl    URL tujuan (untuk recovery jika masih di Keycloak callback)
+     * @param extraSleepMs Waktu tambahan tunggu (ms) setelah sidebar terdeteksi
+     */
+    private void waitForPageReady(String targetUrl, long extraSleepMs) {
+        try {
+            // Langkah 1: Periksa apakah URL masih Keycloak OAuth callback
+            Thread.sleep(1000); // beri sedikit waktu SPA memproses fragment
+            if (isKeycloakCallback()) {
+                System.out.println("  [WARN] Keycloak OAuth callback terdeteksi. Navigasi ulang ke: " + targetUrl);
+                driver.navigate().to(targetUrl);
+                Thread.sleep(2000);
+            }
+
+            // Langkah 2: Tunggu sidebar muncul (bukti sesi aktif & halaman ter-render)
+            boolean sidebarReady = isPresent(leftSidebar, 15);
+            if (!sidebarReady) {
+                System.out.println("  [WARN] Sidebar tidak muncul dalam 15 detik. URL: " + getCurrentUrl());
+            } else {
+                System.out.println("  [INFO] Sidebar terdeteksi. Halaman siap: " + getCurrentUrl());
+            }
+
+            // Langkah 3: Extra sleep agar konten halaman ter-render penuh
+            if (extraSleepMs > 0) {
+                Thread.sleep(extraSleepMs);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
 }
+

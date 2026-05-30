@@ -1,5 +1,6 @@
 package org.test.setting;
 
+import org.openqa.selenium.WebDriver;
 import org.test.common.BasePage;
 import org.test.pages.DashboardPage;
 import org.test.pages.LoginPage;
@@ -11,22 +12,23 @@ import static org.test.common.WebDriverTools.chrome;
 /**
  * User - Test Runner untuk HCM > Setting > User.
  * Menggunakan POM + fluent interface (method chaining).
- *
- * Skenario Test:
- *   1. Verifikasi halaman User List tampil
- *   2. Verifikasi judul halaman
- *   3. Verifikasi kolom tabel (Action, Username, Full Name, Module Access)
- *   4. Verifikasi tombol Add tampil
- *   5. Verifikasi data tersedia di tabel
- *   6. Verifikasi user "tomi@tester.com" ada di tabel
  */
-public class User {
+public class User extends BasePage {
 
-    private static LoginPage loginPage;
+    private final UserPage page;
+
+    /**
+     * Constructor untuk inisialisasi driver dan objek halaman UserPage.
+     * State driver dipertahankan agar tidak hilang saat method chaining.
+     */
+    public User(WebDriver driver) {
+        super(driver);
+        this.page = new UserPage(driver);
+    }
 
     public static void main(String[] args) {
         try {
-            loginPage = new LoginPage(chrome);
+            LoginPage loginPage = new LoginPage(chrome);
 
             chrome.get(baseUrl);
             chrome.manage().window().maximize();
@@ -39,14 +41,16 @@ public class User {
             Thread.sleep(4000);
 
             // Navigasi sekali saja di awal untuk kestabilan sesi SPA
-            UserPage userPage = new DashboardPage(chrome).navigateToUserPage();
+            new DashboardPage(chrome).navigateToUserPage();
 
-            testUserPageLoaded(userPage);
-            testUserPageTitle(userPage);
-            testUserTableColumns(userPage);
-            testUserAddButtonDisplayed(userPage);
-            testUserTableHasData(userPage);
-            testUserExistsInTable(userPage);
+            // Memulai method chaining / fluent test execution
+            new User(chrome)
+                .testUserPageLoaded()
+                .testUserPageTitle()
+                .testUserTableColumns()
+                .testUserAddButtonDisplayed()
+                .testUserTableHasData()
+                .testUserExistsInTable("tomi@tester.com");
 
             System.out.println("\n========================================");
             System.out.println("  SEMUA TEST USER SELESAI");
@@ -70,63 +74,69 @@ public class User {
         }
     }
 
-    public static void testUserPageLoaded(UserPage page) {
-        BasePage.printTestHeader("Test 1: Verifikasi Halaman User List Tampil");
+    public User testUserPageLoaded() {
+        printTestHeader("Test 1: Verifikasi Halaman User List Tampil");
         try {
             page.verifyPageLoaded();
         } catch (Exception e) {
-            BasePage.printFail("Halaman User List tampil", e.getMessage());
+            printFail("Halaman User List tampil", e.getMessage());
         }
         System.out.println();
+        return this;
     }
 
-    public static void testUserPageTitle(UserPage page) {
-        BasePage.printTestHeader("Test 2: Verifikasi Judul Halaman User");
+    public User testUserPageTitle() {
+        printTestHeader("Test 2: Verifikasi Judul Halaman User");
         try {
             page.verifyPageTitle();
         } catch (Exception e) {
-            BasePage.printFail("Judul halaman User", e.getMessage());
+            printFail("Judul halaman User", e.getMessage());
         }
         System.out.println();
+        return this;
     }
 
-    public static void testUserTableColumns(UserPage page) {
-        BasePage.printTestHeader("Test 3: Verifikasi Kolom Tabel (Action, Username, Full Name, Module Access)");
+    public User testUserTableColumns() {
+        printTestHeader("Test 3: Verifikasi Kolom Tabel (Action, Username, Full Name, Module Access)");
         try {
             page.verifyTableColumnsDisplayed();
         } catch (Exception e) {
-            BasePage.printFail("Kolom tabel User", e.getMessage());
+            printFail("Kolom tabel User", e.getMessage());
         }
         System.out.println();
+        return this;
     }
 
-    public static void testUserAddButtonDisplayed(UserPage page) {
-        BasePage.printTestHeader("Test 4: Verifikasi Tombol 'Add' Tampil");
+    public User testUserAddButtonDisplayed() {
+        printTestHeader("Test 4: Verifikasi Tombol 'Add' Tampil");
         try {
             page.verifyAddButtonDisplayed();
         } catch (Exception e) {
-            BasePage.printFail("Tombol Add tampil di User", e.getMessage());
+            printFail("Tombol Add tampil di User", e.getMessage());
         }
         System.out.println();
+        return this;
     }
 
-    public static void testUserTableHasData(UserPage page) {
-        BasePage.printTestHeader("Test 5: Verifikasi Data di Tabel User");
+    public User testUserTableHasData() {
+        printTestHeader("Test 5: Verifikasi Data di Tabel User");
         try {
             page.verifyTableHasData();
         } catch (Exception e) {
-            BasePage.printFail("Data di tabel User", e.getMessage());
+            printFail("Data di tabel User", e.getMessage());
         }
         System.out.println();
+        return this;
     }
 
-    public static void testUserExistsInTable(UserPage page) {
-        BasePage.printTestHeader("Test 6: Verifikasi User 'tomi@tester.com' Ada di Tabel");
+    public User testUserExistsInTable(String username) {
+        printTestHeader("Test 6: Verifikasi User '" + username + "' Ada di Tabel");
         try {
-            page.verifyUsernameInTable("tomi@tester.com");
+            page.verifyUsernameInTable(username);
         } catch (Exception e) {
-            BasePage.printFail("User tomi@tester.com di tabel", e.getMessage());
+            printFail("User " + username + " di tabel", e.getMessage());
         }
         System.out.println();
+        return this;
     }
 }

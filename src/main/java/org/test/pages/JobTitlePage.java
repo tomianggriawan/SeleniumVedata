@@ -69,16 +69,26 @@ public class JobTitlePage extends BasePage {
     private final By notificationGroup = By.cssSelector("div.vue-notification.success");
     private final By tableRows         = By.xpath("//tbody//tr");
 
-    // Locators alternatif untuk form/modal Edit (ID berbeda atau di dalam dialog)
-    // NOTE: All label XPaths use contains(normalize-space(.), ...) instead of exact
-    // text() match to handle Vuetify's dynamic label rendering.
-    private final By editDialog         = By.xpath("//div[contains(@class,'v-overlay') or contains(@class,'v-dialog')]");
-    private final By editDialogActive   = By.xpath("//div[contains(@class,'v-overlay')]");
-    private final By editModalLabelCode = By.xpath("//div[contains(@class, 'v-overlay')]//label[contains(normalize-space(.), 'Code')]");
-    private final By editModalLabelName = By.xpath("//div[contains(@class, 'v-overlay')]//label[contains(normalize-space(.), 'Name')]");
-    private final By editModalInputCode = By.xpath("//div[contains(@class, 'v-overlay')]//label[contains(normalize-space(.), 'Code')]/ancestor::div[contains(@class, 'v-field')]//input | //div[contains(@class, 'v-overlay')]//label[contains(normalize-space(.), 'Code')]/following::input[1]");
-    private final By editModalInputName = By.xpath("//div[contains(@class, 'v-overlay')]//label[contains(normalize-space(.), 'Name')]/ancestor::div[contains(@class, 'v-field')]//input | //div[contains(@class, 'v-overlay')]//label[contains(normalize-space(.), 'Name')]/following::input[1]");
-    private final By editModalSaveBtn   = By.xpath("//div[contains(@class, 'v-dialog') or contains(@class, 'v-overlay')]//button[contains(.,'Save')]");
+    // Locators untuk Edit modal.
+    // Semua di-scope ke overlay yang mengandung label "Code" atau tombol "Save"/"Simpan"
+    // agar tidak bertabrakan dengan dropdown menu three-dots yang juga menggunakan class v-overlay.
+    private final By editFormModal      = By.xpath(
+            "//div[contains(@class,'v-overlay') and (.//label[contains(normalize-space(.),'Code')] or .//button[contains(normalize-space(.),'Save') or contains(normalize-space(.),'Simpan') or contains(normalize-space(.),'Ubah') or contains(normalize-space(.),'Update')])]");
+    private final By editModalLabelCode = By.xpath(
+            "//div[contains(@class,'v-overlay') and (.//label[contains(normalize-space(.),'Code')] or .//button[contains(normalize-space(.),'Save') or contains(normalize-space(.),'Simpan') or contains(normalize-space(.),'Ubah') or contains(normalize-space(.),'Update')])]"
+          + "//label[contains(normalize-space(.),'Code')]");
+    private final By editModalLabelName = By.xpath(
+            "//div[contains(@class,'v-overlay') and (.//label[contains(normalize-space(.),'Code')] or .//button[contains(normalize-space(.),'Save') or contains(normalize-space(.),'Simpan') or contains(normalize-space(.),'Ubah') or contains(normalize-space(.),'Update')])]"
+          + "//label[contains(normalize-space(.),'Name')]");
+    private final By editModalInputCode = By.xpath(
+            "//div[contains(@class,'v-overlay') and (.//label[contains(normalize-space(.),'Code')] or .//button[contains(normalize-space(.),'Save') or contains(normalize-space(.),'Simpan') or contains(normalize-space(.),'Ubah') or contains(normalize-space(.),'Update')])]"
+          + "//label[contains(normalize-space(.),'Code')]/ancestor::div[contains(@class,'v-field')]//input");
+    private final By editModalInputName = By.xpath(
+            "//div[contains(@class,'v-overlay') and (.//label[contains(normalize-space(.),'Code')] or .//button[contains(normalize-space(.),'Save') or contains(normalize-space(.),'Simpan') or contains(normalize-space(.),'Ubah') or contains(normalize-space(.),'Update')])]"
+          + "//label[contains(normalize-space(.),'Name')]/ancestor::div[contains(@class,'v-field')]//input");
+    private final By editModalSaveBtn   = By.xpath(
+            "//div[contains(@class,'v-overlay') and (.//label[contains(normalize-space(.),'Code')] or .//button[contains(normalize-space(.),'Save') or contains(normalize-space(.),'Simpan') or contains(normalize-space(.),'Ubah') or contains(normalize-space(.),'Update')])]"
+          + "//button[contains(normalize-space(.),'Save') or contains(normalize-space(.),'Simpan') or contains(normalize-space(.),'Ubah') or contains(normalize-space(.),'Update')]");
 
     // ==================== Constructor ====================
 
@@ -232,7 +242,8 @@ public class JobTitlePage extends BasePage {
                 // Mode modal: tunggu modal menutup, lalu pageTitle muncul
                 System.out.println("  [INFO] Modal mode: waiting for dialog to close...");
                 try {
-                    longWait.until(ExpectedConditions.invisibilityOfElementLocated(editDialogActive));
+                    // editFormModal scoped ke overlay dengan Save button — tidak akan false-positive ke dropdown
+                    longWait.until(ExpectedConditions.invisibilityOfElementLocated(editFormModal));
                     System.out.println("  [DEBUG] Edit modal closed.");
                 } catch (Exception e) {
                     System.out.println("  [WARN] Modal did not close within 30s.");
@@ -426,25 +437,103 @@ public class JobTitlePage extends BasePage {
         // If menu opened, click the Edit/Ubah item inside it
         if (menuOpened) {
             System.out.println("  [DEBUG] Looking for Edit/Ubah option in dropdown menu (id=" + menuId + ")...");
-            WebElement menuOption = locateMenuEditOption(menuId);
-            if (menuOption != null) {
-                System.out.println("  [DEBUG] Clicking Edit option in dropdown menu...");
-                try {
-                    // Use Actions with hover pause — same technique as opening the menu
-                    new Actions(driver).moveToElement(menuOption).pause(Duration.ofMillis(200)).click().perform();
-                    System.out.println("  [DEBUG] Clicked Edit option (Actions+pause).");
-                } catch (Exception e) {
-                    try {
-                        menuOption.click();
-                        System.out.println("  [DEBUG] Clicked Edit option (native).");
-                    } catch (Exception e2) {
-                        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", menuOption);
-                        System.out.println("  [DEBUG] Clicked Edit option (JS fallback).");
-                    }
-                }
-                sleep(500);
+            
+            // Coba klik langsung menggunakan JS pencarian teks spesifik di dalam menu
+            Boolean jsClicked = false;
+            try {
+                jsClicked = (Boolean) ((JavascriptExecutor) driver).executeScript(
+                    "var menuId = arguments[0];" +
+                    "var menuContainer = document.getElementById(menuId);" +
+                    "if (!menuContainer) {" +
+                    "  var activeOverlays = document.querySelectorAll('.v-overlay--active, .v-menu, .v-overlay');" +
+                    "  for (var i = 0; i < activeOverlays.length; i++) {" +
+                    "    if (activeOverlays[i].textContent.includes('Edit') || activeOverlays[i].textContent.includes('Ubah')) {" +
+                    "      menuContainer = activeOverlays[i];" +
+                    "      break;" +
+                    "    }" +
+                    "  }" +
+                    "}" +
+                    "if (menuContainer) {" +
+                    "  var items = menuContainer.querySelectorAll('.v-list-item, .v-list-item-title, button, a, div, span');" +
+                    "  for (var j = 0; j < items.length; j++) {" +
+                    "    var txt = items[j].textContent.trim();" +
+                    "    if (txt === 'Edit' || txt === 'Ubah' || txt.toLowerCase() === 'edit' || txt.toLowerCase() === 'ubah') {" +
+                    "      items[j].focus();" +
+                    "      items[j].dispatchEvent(new MouseEvent('mouseenter', {bubbles:true}));" +
+                    "      items[j].dispatchEvent(new MouseEvent('mouseover',  {bubbles:true}));" +
+                    "      items[j].click();" +
+                    "      return true;" +
+                    "    }" +
+                    "  }" +
+                    "  for (var j = 0; j < items.length; j++) {" +
+                    "    var txt = items[j].textContent.trim();" +
+                    "    if (txt.includes('Edit') || txt.includes('Ubah')) {" +
+                    "      if (items[j].classList.contains('v-list-item') || items[j].tagName === 'BUTTON' || items[j].children.length === 0) {" +
+                    "        items[j].focus();" +
+                    "        items[j].dispatchEvent(new MouseEvent('mouseenter', {bubbles:true}));" +
+                    "        items[j].dispatchEvent(new MouseEvent('mouseover',  {bubbles:true}));" +
+                    "        items[j].click();" +
+                    "        return true;" +
+                    "      }" +
+                    "    }" +
+                    "  }" +
+                    "}" +
+                    "return false;",
+                    menuId
+                );
+            } catch (Exception e) {
+                System.out.println("  [WARN] Advanced JS menu click failed: " + e.getMessage());
+            }
+
+            if (Boolean.TRUE.equals(jsClicked)) {
+                System.out.println("  [DEBUG] Clicked Edit option successfully via Advanced JS Text Match!");
+                sleep(1500);
             } else {
-                System.out.println("  [WARN] Edit option not found in dropdown. Proceeding anyway.");
+                System.out.println("  [WARN] Advanced JS click did not find matching text. Falling back to element locator...");
+                WebElement menuOption = locateMenuEditOption(menuId);
+                if (menuOption != null) {
+                    System.out.println("  [DEBUG] Clicking Edit option in dropdown menu...");
+                    try {
+                        // Coba JS click canggih dulu sebagai primary karena terbukti paling reliable di Vuetify:
+                        // memanjat DOM untuk menemukan v-list-item, button, atau link yang memiliki event listener
+                        ((JavascriptExecutor) driver).executeScript(
+                            "var el = arguments[0];" +
+                            "var target = el;" +
+                            "while (target && target.tagName !== 'BODY') {" +
+                            "  if (target.classList.contains('v-list-item') || target.tagName === 'BUTTON' || target.tagName === 'A') {" +
+                            "    break;" +
+                            "  }" +
+                            "  target = target.parentElement;" +
+                            "}" +
+                            "if (!target) { target = el; }" +
+                            "target.focus();" +
+                            "target.dispatchEvent(new MouseEvent('mouseenter', {bubbles:true}));" +
+                            "target.dispatchEvent(new MouseEvent('mouseover',  {bubbles:true}));" +
+                            "target.click();" +
+                            "if (target !== el) { el.click(); }",
+                            menuOption
+                        );
+                        System.out.println("  [DEBUG] Clicked Edit option (JS escalative wrapper click fallback).");
+                    } catch (Exception e) {
+                        try {
+                            // Fallback 1: Actions with hover pause
+                            new Actions(driver).moveToElement(menuOption).pause(Duration.ofMillis(200)).click().perform();
+                            System.out.println("  [DEBUG] Clicked Edit option (Actions+pause fallback).");
+                        } catch (Exception e2) {
+                            try {
+                                // Fallback 2: Native click
+                                menuOption.click();
+                                System.out.println("  [DEBUG] Clicked Edit option (native fallback).");
+                            } catch (Exception e3) {
+                                System.out.println("  [WARN] Failed to click Edit option: " + e3.getMessage());
+                            }
+                        }
+                    }
+                    // Tunggu lebih lama agar: (1) dropdown menutup, (2) form modal mulai ter-render
+                    sleep(1200);
+                } else {
+                    System.out.println("  [WARN] Edit option not found in dropdown. Proceeding anyway.");
+                }
             }
         } else {
             // Menu did not open — check if form/modal opened directly
@@ -493,15 +582,16 @@ public class JobTitlePage extends BasePage {
         boolean codeFound = false;
         boolean nameFound = false;
 
-        // 1. Wait for modal overlay to be present and visible
-        // Use broader locator that matches any visible v-overlay (no --active class required)
-        WebDriverWait modalWait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        // 1. Tunggu form modal spesifik (overlay yang mengandung tombol Save) menjadi visible.
+        //    editFormModal menggunakan predicate .//button[contains(.,'Save')] sehingga tidak
+        //    false-positive ke dropdown menu three-dots yang juga berupa v-overlay.
+        WebDriverWait modalWait = new WebDriverWait(driver, Duration.ofSeconds(15));
         try {
-            modalWait.until(ExpectedConditions.visibilityOfElementLocated(editDialogActive));
-            System.out.println("  [INFO] Vuetify overlay is active and visible.");
+            modalWait.until(ExpectedConditions.visibilityOfElementLocated(editFormModal));
+            System.out.println("  [INFO] Edit form modal terdeteksi (overlay dengan Save button).");
             sleep(500);
         } catch (TimeoutException e) {
-            System.out.println("  [WARN] No visible overlay detected after 10s.");
+            System.out.println("  [WARN] Edit form modal tidak muncul dalam 15s.");
             debugPageState("modal-check");
             throw e;
         }
@@ -549,7 +639,10 @@ public class JobTitlePage extends BasePage {
      * Build a positional XPath for the Nth input inside the active overlay.
      */
     private By overlayInputByIndex(int index) {
-        return By.xpath("(//div[contains(@class, 'v-overlay')]//input)[" + index + "]");
+        // Scope ke form modal (v-overlay dengan Save button) agar tidak mencocokkan filter input halaman
+        return By.xpath(
+            "(//div[contains(@class,'v-overlay') and .//button[contains(normalize-space(.),'Save')]]//input)["
+            + index + "]");
     }
 
     /**
@@ -613,14 +706,15 @@ public class JobTitlePage extends BasePage {
 
         if (menuId != null && !menuId.isEmpty()) {
             // Vuetify renders the menu content inside a div with id="{menuId}"
-            strategies.add(By.xpath("//*[@id='" + menuId + "']//*[contains(normalize-space(.), 'Edit') or contains(normalize-space(.), 'Ubah')]"));
-            strategies.add(By.xpath("//*[@id='" + menuId + "']//div | //*[@id='" + menuId + "']//span | //*[@id='" + menuId + "']//a | //*[@id='" + menuId + "']//button"));
+            // Scoped ke tag span, button, a, atau class v-list-item spesifik agar tidak mencocokkan kontainer teratas
+            strategies.add(By.xpath("//*[@id='" + menuId + "']//*[self::span or self::button or self::a or contains(@class,'v-list-item') or contains(@class,'v-list-item-title')][contains(normalize-space(.), 'Edit') or contains(normalize-space(.), 'Ubah')]"));
+            strategies.add(By.xpath("//*[@id='" + menuId + "']//*[text()='Edit' or text()='Ubah' or contains(text(),'Edit') or contains(text(),'Ubah')]"));
         }
 
         // Broader fallbacks: any v-list-item containing Edit/Ubah text
         strategies.add(By.xpath("//*[contains(@class, 'v-list-item') or contains(@class, 'v-list-item-title')][contains(normalize-space(.), 'Edit') or contains(normalize-space(.), 'Ubah')]"));
-        strategies.add(By.xpath("//div[contains(@class, 'v-overlay') or contains(@class, 'v-menu')]//*[contains(normalize-space(.), 'Edit') or contains(normalize-space(.), 'Ubah')]"));
-        strategies.add(By.xpath("//*[self::div or self::span or self::a or self::button][contains(normalize-space(.), 'Edit') or contains(normalize-space(.), 'Ubah')]"));
+        strategies.add(By.xpath("//div[contains(@class, 'v-overlay') or contains(@class, 'v-menu')]//*[self::span or self::button or self::a or contains(@class,'v-list-item') or contains(@class,'v-list-item-title')][contains(normalize-space(.), 'Edit') or contains(normalize-space(.), 'Ubah')]"));
+        strategies.add(By.xpath("//*[self::span or self::button or self::a or contains(@class,'v-list-item-title')][contains(normalize-space(.), 'Edit') or contains(normalize-space(.), 'Ubah')]"));
 
         for (By locator : strategies) {
             try {

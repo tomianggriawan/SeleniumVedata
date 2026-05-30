@@ -188,7 +188,7 @@ public abstract class BasePage {
         boolean valid = !isOnKeycloakLoginPage();
         // Kembali ke halaman sebelumnya
         driver.navigate().to(currentUrl);
-        try { Thread.sleep(20000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        try { Thread.sleep(4000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         return valid;
     }
 

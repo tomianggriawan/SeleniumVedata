@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+
+<!--
+  testng.xml - Konfigurasi Suite TestNG untuk Inventory DDT Framework
+  
+  Cara menjalankan:
+    rtk mvn test
+  
+  Atau langsung dengan TestNG runner:
+    rtk mvn test -Dsurefire.suiteXmlFiles=testng.xml
+-->
+<suite name="Inventory-DDT-Suite" verbose="2" parallel="none">
+
+    <listeners>
+        <!-- Default TestNG HTML reporter sudah otomatis aktif -->
+    </listeners>
+
+    <test name="Inventory-CRUD-Tests" preserve-order="true">
+        <classes>
+            <class name="org.test.inventory.InventoryTest">
+                <methods>
+                    <!-- TC01: Dummy CRUD harus dijalankan pertama -->
+                    <include name="testDummyCRUD"/>
+                    <!-- TC02: Excel DDT CRU, bergantung pada TC01 -->
+                    <include name="testExcelCRU"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+</suite>

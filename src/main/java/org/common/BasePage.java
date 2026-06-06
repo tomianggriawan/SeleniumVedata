@@ -228,7 +228,7 @@ public abstract class BasePage {
         throw new AssertionError("Test failed: " + testName + " - " + message);
     }
 
-    // ==================== Shared Inventory / UI Page Helpers ====================
+    // ==================== Shared Category / UI Page Helpers ====================
 
     protected String xpathString(String value) {
         if (!value.contains("'")) return "'" + value + "'";
@@ -245,17 +245,24 @@ public abstract class BasePage {
     }
 
     protected void confirmDeleteDialog() {
+        System.out.println("  [BasePage] Mencari tombol konfirmasi delete...");
         try {
             js.executeScript(
                 "var btns = document.querySelectorAll('button');" +
-                "var keywords = ['Ya','Yes','OK','Hapus','Delete','Konfirmasi'];" +
+                "var keywords = ['Ya','Yes','OK','Hapus','Delete','Konfirmasi','Confirm'];" +
                 "for(var i=0;i<btns.length;i++){" +
-                "  var t = btns[i].textContent.trim();" +
+                "  var t = btns[i].textContent.trim().toLowerCase();" +
                 "  for(var k=0;k<keywords.length;k++){" +
-                "    if(t === keywords[k]){ btns[i].click(); return; }" +
-                "  }}"
+                "    if(t === keywords[k].toLowerCase()){" +
+                "      btns[i].click();" +
+                "      return;" +
+                "    }" +
+                "  }" +
+                "}"
             );
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            System.out.println("  [WARN] confirmDeleteDialog JS error: " + e.getMessage());
+        }
         try { Thread.sleep(1000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
     }
 

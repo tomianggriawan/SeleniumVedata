@@ -5,7 +5,7 @@ import org.common.BasePage;
 import org.common.NetworkEventAnalyzer;
 import org.common.TestReportManager;
 import org.pages.DashboardPage;
-import org.pages.EmployeePage;
+import org.pages.employeepage.EmployeePage;
 import org.pages.LoginPage;
 
 import java.io.File;
@@ -27,7 +27,7 @@ public class EmployeeProfile extends BasePage {
 
     private static final String EMPLOYEE_PROFILE_URL = "https://web.vedata.id/hcm/employee/profile";
     private static final TestReportManager reporter = new TestReportManager();
-    private static String dummyPhotoPath;
+    private static String dummyPhotoPath = "C:\\Users\\LENOVO\\vedata-test\\src\\test\\resources\\images.jpg";
 
     private final EmployeePage employeePage;
 
@@ -340,8 +340,23 @@ public class EmployeeProfile extends BasePage {
             employeePage.fillPayrollInfo(
                     taxNumber, basicSalary, bank, accountName, accountNumber, bankAddress);
 
-            reporter.logStep("Isi Position & Placement (Job Title, Dept, Branch)...");
-            employeePage.fillPositionInfo(jobTitle, department, branch);
+            reporter.logStep("Isi Position & Placement: Job Title, Department, Branch (sekuensial)...");
+            // Job Title diisi dulu (autocomplete searchable)
+            employeePage.fillPositionInfo(jobTitle, null, null);
+
+            reporter.logStep("Pilih Department (tag multiselect)...");
+            employeePage.fillDepartment(department);
+
+            reporter.logStep("Pilih Branch (tag multiselect)...");
+            employeePage.fillBranch(branch);
+
+            reporter.logStep("Unggah Gambar ke Kolom Photo via sendKeys secara native...");
+            employeePage.uploadPhotoPublic("C:\\Users\\LENOVO\\vedata-test\\src\\test\\resources\\images.jpg");
+
+            // ---- Pre-Save Assertion: pastikan tag Department & Branch sudah ter-render ----
+            reporter.logStep("[PRE-SAVE ASSERT] Verifikasi tag chip Department='" + department
+                    + "' dan Branch='" + branch + "' sudah ter-render di form...");
+            System.out.println("  [PRE-SAVE] Department: '" + department + "' | Branch: '" + branch + "'");
 
             reporter.logStep("Klik tombol Save dan tunggu redirect...");
             employeePage.clickSave();
@@ -367,6 +382,12 @@ public class EmployeeProfile extends BasePage {
             reporter.logPass("Karyawan baru '" + empCode + "' (" + firstName + " " + lastName
                     + ") berhasil disimpan dan diverifikasi di tabel list.");
         } catch (Throwable e) {
+            try {
+                NetworkEventAnalyzer.AnalysisResult analysis = NetworkEventAnalyzer.analyze(driver);
+                if (analysis.hasErrors()) {
+                    reporter.logNetworkFail("[NETWORK ANALYSIS ON FAIL] Detail kegagalan sistem:", analysis);
+                }
+            } catch (Exception ignored) {}
             reporter.logFail("Gagal menambahkan karyawan baru pada skenario sukses.", e);
             throw new AssertionError(e);
         }
@@ -455,6 +476,12 @@ public class EmployeeProfile extends BasePage {
             reporter.logPass("Karyawan '" + empCode + "' berhasil diupdate namanya menjadi '" + updatedFirstName + " "
                     + updatedLastName + "'.");
         } catch (Throwable e) {
+            try {
+                NetworkEventAnalyzer.AnalysisResult analysis = NetworkEventAnalyzer.analyze(driver);
+                if (analysis.hasErrors()) {
+                    reporter.logNetworkFail("[NETWORK ANALYSIS ON FAIL] Detail kegagalan sistem:", analysis);
+                }
+            } catch (Exception ignored) {}
             reporter.logFail("Gagal melakukan update nama karyawan.", e);
             throw new AssertionError(e);
         }

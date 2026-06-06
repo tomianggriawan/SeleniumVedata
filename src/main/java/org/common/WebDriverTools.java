@@ -44,6 +44,21 @@ public class WebDriverTools {
         // Sertakan log preferences ke dalam ChromeOptions
         options.setCapability("goog:loggingPrefs", logPrefs);
 
+        // Izinkan semua cookie (termasuk cookie pihak ketiga/cross-site)
+        // untuk menghentikan Keycloak re-auth loop yang dipicu oleh pemblokiran cookie cross-origin.
+        java.util.Map<String, Object> prefs = new java.util.HashMap<>();
+        prefs.put("profile.cookie_controls_mode", 0); // 0 = Allow all cookies
+        prefs.put("profile.default_content_setting_values.cookies", 1); // 1 = Allow cookies
+        options.setExperimentalOption("prefs", prefs);
+
+        // FIX: Keycloak checkLoginIframe mengembalikan "login_required" karena Chrome
+        // memblokir third-party cookies dari keycloak.rumahaplikasi.com saat di web.vedata.id.
+        // Ini menyebabkan SPA melakukan OAuth redirect main-window tanpa henti.
+        // Solusi: izinkan cross-site cookies agar Keycloak session cookie terbaca oleh iframe.
+        options.addArguments("--disable-features=SameSiteByDefaultCookies,CookiesWithoutSameSiteMustBeSecure");
+        options.addArguments("--enable-features=SameSiteDefaultChecks");
+        options.addArguments("--disable-site-isolation-trials");
+
         // Aktifkan logging network secara eksplisit melalui experimental options
         java.util.Map<String, Object> perfLoggingPrefs = new java.util.HashMap<>();
         perfLoggingPrefs.put("enableNetwork", true);
@@ -52,4 +67,5 @@ public class WebDriverTools {
 
         return new ChromeDriver(options);
     }
+
 }

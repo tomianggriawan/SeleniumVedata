@@ -1,4 +1,4 @@
-package org.test.inventory;
+package org.pages.inventorypage;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
@@ -13,7 +13,7 @@ import java.time.Duration;
 import java.util.List;
 
 /**
- * OptionPage - Page Object untuk Tab OPTION di Inventory Setting.
+ * OptionPage - Page Object untuk Tab OPTION di Category Setting.
  *
  * Mewarisi BasePage untuk helper Selenium (xpathString, clearAndSetInputValueJS,
  * clickEditButton, clickDeleteButton, confirmDeleteDialog, checkBackendOrValidationError,

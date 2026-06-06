@@ -3,6 +3,8 @@ package org.pages;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.common.BasePage;
+import org.pages.employeepage.EmployeePage;
+import org.pages.settingpage.*;
 
 /**
  * DashboardPage - Page Object Class representing the Dashboard of VEDATA.
@@ -25,7 +27,7 @@ public class DashboardPage extends BasePage {
     private final By menuEmployeeDashboard = By.xpath("//a[@href='/hcm/employee/dashboard']");
     private final By menuEmployeeProfile = By.xpath("//a[@href='/hcm/employee/profile']");
 
-    // --- Modul Inventory ---
+    // --- Modul Category ---
     private final By menuInventoryDashboard = By.xpath("//a[@href='/inventory/dashboard']");
     private final By menuInventoryWarehouse = By.xpath("//a[@href='/inventory/warehouse']");
     private final By menuInventorySupplier = By.xpath("//a[@href='/inventory/supplier']");
@@ -99,26 +101,26 @@ public class DashboardPage extends BasePage {
     }
 
     /**
-     * Verifikasi menu Inventory > Dashboard tampil di sidebar
+     * Verifikasi menu Category > Dashboard tampil di sidebar
      */
     public DashboardPage verifyMenuInventoryDashboardDisplayed() {
-        assertCondition("Menu 'Inventory Dashboard' tampil di sidebar", isDisplayed(menuInventoryDashboard, 5));
+        assertCondition("Menu 'Category Dashboard' tampil di sidebar", isDisplayed(menuInventoryDashboard, 5));
         return this;
     }
 
     /**
-     * Verifikasi menu Inventory > Warehouse tampil di sidebar
+     * Verifikasi menu Category > Warehouse tampil di sidebar
      */
     public DashboardPage verifyMenuInventoryWarehouseDisplayed() {
-        assertCondition("Menu 'Inventory Warehouse' tampil di sidebar", isDisplayed(menuInventoryWarehouse, 5));
+        assertCondition("Menu 'Category Warehouse' tampil di sidebar", isDisplayed(menuInventoryWarehouse, 5));
         return this;
     }
 
     /**
-     * Verifikasi menu Inventory > Supplier tampil di sidebar
+     * Verifikasi menu Category > Supplier tampil di sidebar
      */
     public DashboardPage verifyMenuInventorySupplierDisplayed() {
-        assertCondition("Menu 'Inventory Supplier' tampil di sidebar", isDisplayed(menuInventorySupplier, 5));
+        assertCondition("Menu 'Category Supplier' tampil di sidebar", isDisplayed(menuInventorySupplier, 5));
         return this;
     }
 

@@ -4,7 +4,7 @@ import org.openqa.selenium.WebDriver;
 import org.common.BasePage;
 import org.common.NetworkEventAnalyzer;
 import org.common.TestReportManager;
-import org.pages.AccessRightsPage;
+import org.pages.settingpage.AccessRightsPage;
 import org.pages.DashboardPage;
 import org.pages.LoginPage;
 

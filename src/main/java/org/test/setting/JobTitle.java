@@ -5,7 +5,7 @@ import org.common.BasePage;
 import org.common.NetworkEventAnalyzer;
 import org.common.TestReportManager;
 import org.pages.DashboardPage;
-import org.pages.JobTitlePage;
+import org.pages.settingpage.JobTitlePage;
 import org.pages.LoginPage;
 
 import java.util.UUID;
@@ -38,7 +38,7 @@ public class JobTitle extends BasePage {
 
         String[] retailTitles = {
             "Store Manager", "Assistant Store Manager", "Cashier", "Sales Associate",
-            "Merchandiser", "Stock Clerk", "Customer Service Specialist", "Inventory Associate",
+            "Merchandiser", "Stock Clerk", "Customer Service Specialist", "Category Associate",
             "Retail Sales Consultant", "Visual Merchandiser"
         };
         java.util.Random rand = new java.util.Random();

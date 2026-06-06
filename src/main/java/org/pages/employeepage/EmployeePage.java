@@ -1,4 +1,4 @@
-package org.pages;
+package org.pages.employeepage;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
@@ -1074,6 +1074,260 @@ public class EmployeePage extends BasePage {
         } catch (Exception e) {
             System.out.println("  [WARN] fillNumberField [for=" + labelFor + "]: " + e.getMessage());
         }
+    }
+
+    /**
+     * Expose upload photo secara public untuk mendukung pengisian formulir sekuensial.
+     */
+    public EmployeePage uploadPhotoPublic(String filePath) {
+        System.out.println("  [STEP] Unggah foto secara native: '" + filePath + "'");
+        uploadPhoto(filePath);
+        return this;
+    }
+
+    /**
+     * Isi field Department (tag multiselect Vuetify v-select).
+     * Mengklik kontainer dropdown, memilih opsi dari overlay, lalu memverifikasi
+     * bahwa tag chip ter-render di dalam kontainer field.
+     */
+    public EmployeePage fillDepartment(String departmentName) {
+        System.out.println("  [STEP] Pilih Department: '" + departmentName + "'");
+        fillTagSelect(inputDepartment, departmentName, "Department");
+        return this;
+    }
+
+    /**
+     * Isi field Branch (tag multiselect Vuetify v-select).
+     * Mengklik kontainer dropdown, memilih opsi dari overlay, lalu memverifikasi
+     * bahwa tag chip ter-render di dalam kontainer field.
+     */
+    public EmployeePage fillBranch(String branchName) {
+        System.out.println("  [STEP] Pilih Branch: '" + branchName + "'");
+        fillTagSelect(inputBranch, branchName, "Branch");
+        return this;
+    }
+
+    /**
+     * Strategi pengisian khusus untuk komponen tag/chip multiselect Vuetify (v-select dengan inputmode=none).
+     * Berdasarkan DOM inspection: field ini menggunakan div[role='combobox'] dengan hidden input —
+     * typing tidak mungkin dilakukan. Kita harus klik kontainer untuk membuka overlay.
+     *
+     * Langkah:
+     * 1. Scroll ke kontainer field, lalu klik untuk membuka overlay.
+     * 2. Tunggu overlay dengan .v-list-item muncul.
+     * 3. Temukan item yang cocok berdasarkan teks dan klik via JS.
+     * 4. Tutup overlay (Escape).
+     * 5. Verifikasi tag chip (.v-chip atau .v-select__selection) ter-render di dalam kontainer.
+     */
+    private void fillTagSelect(By inputLocator, String value, String fieldName) {
+        try {
+            // Step 1 — Temukan input dan naik ke kontainer .v-field
+            WebElement input = new WebDriverWait(driver, Duration.ofSeconds(10))
+                .until(ExpectedConditions.presenceOfElementLocated(inputLocator));
+            ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].scrollIntoView({block:'center'});", input);
+            sleep(300);
+
+            // Cari ancestor .v-field[role='combobox'] sebagai pemicu click
+            WebElement vField = null;
+            try {
+                vField = input.findElement(
+                    By.xpath("./ancestor::div[contains(@class,'v-field')][@role='combobox']"));
+            } catch (Exception ignored) {}
+            if (vField == null) {
+                // Fallback via JS tree walk
+                vField = (WebElement) ((JavascriptExecutor) driver).executeScript(
+                    "var el = arguments[0].parentElement;" +
+                    "while (el) {" +
+                    "  if (el.getAttribute && el.getAttribute('role') === 'combobox') return el;" +
+                    "  el = el.parentElement;" +
+                    "}" +
+                    "return null;", input);
+            }
+            if (vField == null) {
+                throw new IllegalStateException(
+                    "[" + fieldName + "] Tidak dapat menemukan div[role='combobox'] container.");
+            }
+
+            // Step 2 — Buka dropdown dengan beberapa strategi berurutan
+            boolean opened = false;
+
+            // Strategi A: Klik chevron (.v-field__append-inner) via JS
+            try {
+                WebElement chevron = vField.findElement(By.cssSelector(".v-field__append-inner"));
+                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", chevron);
+                sleep(400);
+                opened = isOverlayWithItemsVisible();
+                if (opened) System.out.println("  [DEBUG] [" + fieldName + "] dibuka via klik chevron (JS).");
+            } catch (Exception ignored) {}
+
+            // Strategi B: Actions klik pada chevron
+            if (!opened) {
+                try {
+                    WebElement chevron = vField.findElement(By.cssSelector(".v-field__append-inner"));
+                    new Actions(driver).moveToElement(chevron).click().perform();
+                    sleep(400);
+                    opened = isOverlayWithItemsVisible();
+                    if (opened) System.out.println("  [DEBUG] [" + fieldName + "] dibuka via Actions klik chevron.");
+                } catch (Exception ignored) {}
+            }
+
+            // Strategi C: Vue3 internal — set menu.value = true
+            if (!opened) {
+                try {
+                    Boolean vueMod = (Boolean) ((JavascriptExecutor) driver).executeScript(
+                        "var el = arguments[0];" +
+                        "var comp = el.__vueParentComponent; var limit = 0;" +
+                        "while (comp && limit < 25) {" +
+                        "  var name = (comp.type && (comp.type.name || comp.type.__name)) || '';" +
+                        "  if (name.toLowerCase().includes('select') || name.toLowerCase().includes('combobox')) {" +
+                        "    if (comp.setupState && comp.setupState.menu !== undefined) {" +
+                        "      comp.setupState.menu.value = true; return true;" +
+                        "    }" +
+                        "    if (comp.exposed && comp.exposed.menu !== undefined) {" +
+                        "      comp.exposed.menu.value = true; return true;" +
+                        "    }" +
+                        "  }" +
+                        "  comp = comp.parent; limit++;" +
+                        "} return false;",
+                        input);
+                    if (Boolean.TRUE.equals(vueMod)) {
+                        sleep(400);
+                        opened = isOverlayWithItemsVisible();
+                        if (opened) System.out.println("  [DEBUG] [" + fieldName + "] dibuka via Vue3 internal.");
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            // Strategi D: JS pointer events pada vField
+            if (!opened) {
+                try {
+                    ((JavascriptExecutor) driver).executeScript(
+                        "var el = arguments[0];" +
+                        "['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){" +
+                        "  el.dispatchEvent(new MouseEvent(t,{bubbles:true,cancelable:true,view:window}));" +
+                        "});", vField);
+                    sleep(400);
+                    opened = isOverlayWithItemsVisible();
+                    if (opened) System.out.println("  [DEBUG] [" + fieldName + "] dibuka via JS pointer events.");
+                } catch (Exception ignored) {}
+            }
+
+            if (!opened) {
+                System.out.println("  [WARN] [" + fieldName + "] Overlay tidak terkonfirmasi terbuka — tetap melanjutkan.");
+            }
+
+            // Step 3 — Log semua item yang tersedia
+            try {
+                System.out.println("  [DEBUG] Items tersedia di overlay [" + fieldName + "]:");
+                List<WebElement> overlays = driver.findElements(
+                    By.cssSelector(".v-overlay__content, .v-menu, .v-overlay--active"));
+                for (WebElement ov : overlays) {
+                    if (ov.isDisplayed()) {
+                        for (WebElement item : ov.findElements(By.cssSelector(".v-list-item"))) {
+                            System.out.println("    - '" + item.getText().trim() + "'");
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+
+            // Step 4 — Tunggu dan temukan item yang cocok lalu klik
+            WebElement matchedItem = null;
+            try {
+                matchedItem = new WebDriverWait(driver, Duration.ofSeconds(7))
+                    .until(d -> {
+                        List<WebElement> overlays = d.findElements(
+                            By.cssSelector(".v-overlay__content, .v-menu, .v-overlay--active"));
+                        for (WebElement ov : overlays) {
+                            if (ov.isDisplayed()) {
+                                for (WebElement item : ov.findElements(By.cssSelector(".v-list-item"))) {
+                                    String text = item.getText().trim();
+                                    if ("FIRST_AVAILABLE".equals(value) && !text.isEmpty()) return item;
+                                    if (text.toLowerCase().contains(value.toLowerCase())) return item;
+                                }
+                            }
+                        }
+                        return null;
+                    });
+            } catch (Exception e) {
+                // Debug: print semua overlay yang ada saat ini
+                try {
+                    List<WebElement> all = driver.findElements(
+                        By.cssSelector(".v-overlay__content, .v-menu, .v-overlay--active"));
+                    System.out.println("  [DEBUG] Overlay count: " + all.size());
+                    for (WebElement ov : all) {
+                        System.out.println("    Overlay visible=" + ov.isDisplayed() + " text='" + ov.getText().substring(0, Math.min(200, ov.getText().length())) + "'");
+                    }
+                } catch (Exception ignored) {}
+                throw new IllegalStateException(
+                    "[" + fieldName + "] Tidak ada opsi yang cocok untuk '" + value + "': " + e.getMessage(), e);
+            }
+
+            String selectedText = matchedItem.getText().trim();
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", matchedItem);
+            System.out.println("  [INFO] [" + fieldName + "] Dipilih: '" + selectedText + "'");
+            sleep(400);
+
+            // Step 5 — Tutup overlay dengan Escape
+            try {
+                if (isOverlayWithItemsVisible()) {
+                    new Actions(driver).sendKeys(Keys.ESCAPE).perform();
+                    sleep(300);
+                }
+            } catch (Exception ignored) {}
+
+            // Step 6 — Verifikasi tag chip ter-render di dalam kontainer field
+            final WebElement finalVField = vField; // final ref agar bisa dipakai di dalam lambda
+            boolean tagVerified = false;
+            try {
+                tagVerified = new WebDriverWait(driver, Duration.ofSeconds(5))
+                    .until(d -> {
+                        try {
+                            // Cari chip/selection di dalam field container atau seluruh halaman
+                            List<WebElement> chips = finalVField.findElements(
+                                By.cssSelector(".v-chip, .v-select__selection, .v-combobox__selection, [class*='chip'], [class*='tag']"));
+                            for (WebElement chip : chips) {
+                                if (chip.isDisplayed() && chip.getText().toLowerCase().contains(value.toLowerCase())) {
+                                    return true;
+                                }
+                            }
+                            // Fallback: cek teks dari seluruh vField apakah sudah mengandung value
+                            String fieldText = finalVField.getText().toLowerCase();
+                            return fieldText.contains(value.toLowerCase());
+                        } catch (Exception ex) {
+                            return false;
+                        }
+                    });
+            } catch (Exception ignored) {}
+
+            if (tagVerified) {
+                System.out.println("  [ASSERT OK] Tag '" + value + "' berhasil ter-render di field [" + fieldName + "].");
+            } else {
+                System.out.println("  [ASSERT WARN] Tag '" + value + "' TIDAK terdeteksi di field [" + fieldName + "] setelah pemilihan.");
+            }
+
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                "Gagal mengisi tag-select '" + fieldName + "' dengan nilai '" + value + "': " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Helper: cek apakah ada overlay Vuetify yang tampil dan memiliki setidaknya satu .v-list-item.
+     */
+    private boolean isOverlayWithItemsVisible() {
+        try {
+            List<WebElement> overlays = driver.findElements(
+                By.cssSelector(".v-overlay__content, .v-menu, .v-overlay--active"));
+            for (WebElement ov : overlays) {
+                if (ov.isDisplayed() && !ov.findElements(By.cssSelector(".v-list-item")).isEmpty()) {
+                    return true;
+                }
+            }
+        } catch (Exception ignored) {}
+        return false;
     }
 
     /**

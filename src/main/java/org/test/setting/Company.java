@@ -5,7 +5,7 @@ import org.common.BasePage;
 import org.common.NetworkEventAnalyzer;
 import org.common.TestReportManager;
 import org.pages.DashboardPage;
-import org.pages.CompanyPage;
+import org.pages.settingpage.CompanyPage;
 import org.pages.LoginPage;
 
 import static org.common.WebDriverTools.baseUrl;

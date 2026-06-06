@@ -6,7 +6,7 @@ import org.common.NetworkEventAnalyzer;
 import org.common.TestReportManager;
 import org.pages.DashboardPage;
 import org.pages.LoginPage;
-import org.pages.UserPage;
+import org.pages.settingpage.UserPage;
 
 import static org.common.WebDriverTools.baseUrl;
 import static org.common.WebDriverTools.chrome;

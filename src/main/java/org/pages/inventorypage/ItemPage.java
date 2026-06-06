@@ -1,4 +1,4 @@
-package org.test.inventory;
+package org.pages.inventorypage;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * ItemPage - Page Object untuk Tab ITEM (Form) di Inventory Setting.
+ * ItemPage - Page Object untuk Tab ITEM (Form) di Category Setting.
  *
  * Mewarisi BasePage untuk helper Selenium (xpathString, clickEditButton,
  * clickDeleteButton, confirmDeleteDialog, checkBackendOrValidationError).

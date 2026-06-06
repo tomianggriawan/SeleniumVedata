@@ -186,8 +186,32 @@ public class NetworkEventAnalyzer {
         }
 
         // 3. Parse Console Log untuk FRONTEND errors mandiri (bukan network)
+
+        // URL dan pesan yang diketahui sebagai false-positive (server-side noise,
+        // tidak mempengaruhi fungsionalitas aplikasi):
+        //  - main.ts MIME error: server mengembalikan HTML saat browser request /src/main.ts
+        //    (Vite dev mode artifact), namun app sudah ter-render via /static/js/index.*.js
+        //  - Failed to load module script: MIME type mismatch untuk asset dev Vite
+        final String[] KNOWN_NOISE_PATTERNS = {
+            "/src/main.ts",
+            "Failed to load module script",
+            "Vite",
+            "/src/main"
+        };
+
         List<NetworkError> consoleOnlyErrors = new ArrayList<>();
         for (String msg : consoleSevere) {
+            // Skip known noise yang bukan indikator kegagalan test aktual
+            boolean isKnownNoise = false;
+            for (String pattern : KNOWN_NOISE_PATTERNS) {
+                if (msg.contains(pattern)) {
+                    isKnownNoise = true;
+                    System.out.println("  [NetworkAnalyzer] Skipping known noise: " + msg.substring(0, Math.min(80, msg.length())));
+                    break;
+                }
+            }
+            if (isKnownNoise) continue;
+
             boolean alreadyCoveredByNetwork = networkErrors.stream()
                 .anyMatch(e -> e.consoleContext != null && e.consoleContext.contains(
                     msg.substring(0, Math.min(40, msg.length()))));

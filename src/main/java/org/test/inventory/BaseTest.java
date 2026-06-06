@@ -12,7 +12,7 @@ import org.testng.annotations.BeforeSuite;
 import java.time.Duration;
 
 /**
- * BaseTest - Setup & Teardown WebDriver untuk seluruh test suite Inventory.
+ * BaseTest - Setup & Teardown WebDriver untuk seluruh test suite Category.
  *
  * Siklus Hidup:
  * - @BeforeSuite : Login ke VEDATA, maximize window, tunggu dashboard siap.
@@ -38,7 +38,7 @@ public class BaseTest {
     @BeforeSuite(alwaysRun = true)
     public void setUpSuite() throws InterruptedException {
         System.out.println("=================================================");
-        System.out.println("[SUITE START] Inventory DDT Test Suite");
+        System.out.println("[SUITE START] Category DDT Test Suite");
         System.out.println("=================================================");
 
         driver = WebDriverTools.chrome;
@@ -52,13 +52,13 @@ public class BaseTest {
 
         doLogin();
 
-        System.out.println("  [INFO] Navigasi ke Inventory Setting...");
+        System.out.println("  [INFO] Navigasi ke Category Setting...");
         driver.get(INVENTORY_SETTING_URL);
         Thread.sleep(4000);
 
         try {
             wait.until(ExpectedConditions.visibilityOfElementLocated(By.className("leftSidebar")));
-            System.out.println("  [INFO] Halaman Inventory Setting berhasil dimuat.");
+            System.out.println("  [INFO] Halaman Category Setting berhasil dimuat.");
         } catch (Exception e) {
             System.out.println("  [WARN] leftSidebar tidak terdeteksi, lanjut...");
         }
@@ -71,7 +71,7 @@ public class BaseTest {
     @AfterSuite(alwaysRun = true)
     public void tearDownSuite() {
         System.out.println("\n=================================================");
-        System.out.println("[SUITE END] Inventory DDT Test Suite selesai.");
+        System.out.println("[SUITE END] Category DDT Test Suite selesai.");
         System.out.println("=================================================");
         if (driver != null) {
             try {
@@ -112,7 +112,7 @@ public class BaseTest {
     }
 
     /**
-     * Navigasi ke Inventory Setting dan tunggu tab selesai dimuat.
+     * Navigasi ke Category Setting dan tunggu tab selesai dimuat.
      */
     protected void navigateToInventorySetting() throws InterruptedException {
         driver.get(INVENTORY_SETTING_URL);

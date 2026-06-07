@@ -2,125 +2,58 @@ package org.test.setting;
 
 import org.openqa.selenium.WebDriver;
 import org.common.BasePage;
-import org.common.NetworkEventAnalyzer;
-import org.common.TestReportManager;
 import org.pages.DashboardPage;
-import org.pages.LoginPage;
 import org.pages.settingpage.ServicePage;
 
-import static org.common.WebDriverTools.baseUrl;
 import static org.common.WebDriverTools.chrome;
 
 /**
  * Service - Test Runner untuk HCM > Setting > Service.
- * Menggunakan POM + fluent interface (method chaining).
+ *
+ * Arsitektur:
+ *  - Mewarisi BasePage (WebDriver helper, reporter, network analyzer, runTest lifecycle)
+ *  - POM via ServicePage
+ *  - Fluent interface (method chaining)
  */
 public class Service extends BasePage {
 
-    private static final TestReportManager reporter = new TestReportManager();
     private final ServicePage page;
 
-    /**
-     * Constructor untuk inisialisasi driver dan objek halaman ServicePage.
-     * State driver dipertahaman agar tidak hilang saat method chaining.
-     */
     public Service(WebDriver driver) {
         super(driver);
         this.page = new ServicePage(driver);
     }
 
+    // ==================== Entry Point ====================
+
     public static void main(String[] args) {
-        String reportDirPath = "c:/Users/LENOVO/vedata-test/src/main/java/org/test/report";
-        java.io.File reportDir = new java.io.File(reportDirPath);
-        if (!reportDir.exists()) {
-            reportDir.mkdirs();
-        }
-
-        // Pembersihan (Replace File):
-        // Hapus file laporan lama 'employee-test-report.html' jika ada di folder report
-        java.io.File oldReportInDir = new java.io.File(reportDir, "employee-test-report.html");
-        if (oldReportInDir.exists()) {
-            oldReportInDir.delete();
-            System.out.println("  [INFO] Deleted old employee-test-report.html from report directory.");
-        }
-        // Hapus dari root folder juga jika ada
-        java.io.File oldReportInRoot = new java.io.File("c:/Users/LENOVO/vedata-test/employee-test-report.html");
-        if (oldReportInRoot.exists()) {
-            oldReportInRoot.delete();
-            System.out.println("  [INFO] Deleted old employee-test-report.html from root.");
-        }
-
-        // Aturan Penamaan File Dinamis: Service-test-report_yyyyMMdd-HHmmss.html
-        String timestamp = new java.text.SimpleDateFormat("yyyyMMdd-HHmmss").format(new java.util.Date());
-        String reportFileName = "Service-test-report_" + timestamp + ".html";
-        java.io.File reportFile = new java.io.File(reportDir, reportFileName);
-        String reportPath = reportFile.getAbsolutePath();
-
-        try {
-            LoginPage loginPage = new LoginPage(chrome);
-
-            chrome.get(baseUrl);
-            chrome.manage().window().maximize();
-
-            // Init reporter suite
-            reporter.startSuite();
-
-            loginPage.login("tomi@tester.com", "1234");
-            Thread.sleep(4000);
-
-            // Drain log buffer dari proses login
-            NetworkEventAnalyzer.drainLogs(chrome);
-
-            // Navigasi sekali saja di awal untuk kestabilan sesi SPA
+        runTest("HCM Service", "Service", () -> {
             new DashboardPage(chrome).navigateToServicePage();
 
-            // Memulai method chaining / fluent test execution
             new Service(chrome)
-                .testServicePageLoaded()
-                .testServicePageTitle()
-                .testServiceSubscribedSection()
-                .testServiceAvailableSection()
-                .testServiceProductTab()
-                .testServiceBillingTab()
-                .testServiceSearchInput()
-                .testServiceRequestButton();
-
-            System.out.println("\n========================================");
-            System.out.println("  SEMUA TEST SERVICE SELESAI");
-            System.out.println("========================================");
-
-        } catch (Throwable e) {
-            System.err.println("\n!!! TEST SUITE ERROR !!!");
-            System.err.println("Message: " + e.getMessage());
-            try {
-                System.err.println("URL saat error: " + chrome.getCurrentUrl());
-                java.nio.file.Files.writeString(
-                    java.nio.file.Path.of("c:/Users/LENOVO/vedata-test/page_source_error.html"),
-                    chrome.getPageSource()
-                );
-            } catch (Exception ex) {
-                System.err.println("Gagal dump page source: " + ex.getMessage());
-            }
-            e.printStackTrace();
-        } finally {
-            // Generate report
-            reporter.generateHtmlReport(reportPath);
-            chrome.quit();
-        }
+                .testPageLoaded()
+                .testPageTitle()
+                .testSubscribedSection()
+                .testAvailableSection()
+                .testProductTab()
+                .testBillingTab()
+                .testSearchInput()
+                .testRequestButton();
+        });
     }
 
-    public Service testServicePageLoaded() {
+    // ==================== TEST METHODS ====================
+
+    /**
+     * TC_SERVICE_PAGE_LOADED - Verifikasi halaman Service tampil.
+     */
+    public Service testPageLoaded() {
         reporter.startTest("TC_SERVICE_PAGE_LOADED", "Verifikasi Halaman Service Tampil");
-        NetworkEventAnalyzer.drainLogs(driver);
+        drainLogs();
         try {
             reporter.logStep("Verifikasi halaman Service berhasil dimuat...");
             page.verifyPageLoaded();
-            // Inspeksi log setelah navigasi halaman pertama
-            NetworkEventAnalyzer.AnalysisResult analysis = NetworkEventAnalyzer.analyze(driver);
-            if (analysis.hasErrors()) {
-                reporter.logNetworkFail("[NETWORK ANALYSIS] Error saat memuat halaman Service", analysis);
-                throw new AssertionError("[NETWORK ANALYSIS FAIL] " + analysis.buildSummary());
-            }
+            inspectNetwork("memuat halaman Service");
             reporter.logPass("Halaman Service berhasil ditampilkan.");
         } catch (AssertionError e) {
             throw e;
@@ -132,7 +65,10 @@ public class Service extends BasePage {
         return this;
     }
 
-    public Service testServicePageTitle() {
+    /**
+     * TC_SERVICE_PAGE_TITLE - Verifikasi judul halaman Service.
+     */
+    public Service testPageTitle() {
         reporter.startTest("TC_SERVICE_PAGE_TITLE", "Verifikasi Judul Halaman Service");
         try {
             reporter.logStep("Verifikasi judul halaman Service sesuai...");
@@ -146,7 +82,10 @@ public class Service extends BasePage {
         return this;
     }
 
-    public Service testServiceSubscribedSection() {
+    /**
+     * TC_SERVICE_SUBSCRIBED_SECTION - Verifikasi section produk yang sedang dipakai.
+     */
+    public Service testSubscribedSection() {
         reporter.startTest("TC_SERVICE_SUBSCRIBED_SECTION", "Verifikasi Section 'Produk yang sedang dipakai / subscribe'");
         try {
             reporter.logStep("Verifikasi section produk yang sedang dilanggani tersedia...");
@@ -160,7 +99,10 @@ public class Service extends BasePage {
         return this;
     }
 
-    public Service testServiceAvailableSection() {
+    /**
+     * TC_SERVICE_AVAILABLE_SECTION - Verifikasi section produk yang tersedia.
+     */
+    public Service testAvailableSection() {
         reporter.startTest("TC_SERVICE_AVAILABLE_SECTION", "Verifikasi Section 'Produk yang tersedia'");
         try {
             reporter.logStep("Verifikasi section produk yang tersedia ditampilkan...");
@@ -174,7 +116,10 @@ public class Service extends BasePage {
         return this;
     }
 
-    public Service testServiceProductTab() {
+    /**
+     * TC_SERVICE_PRODUCT_TAB - Verifikasi tab 'Product' tampil.
+     */
+    public Service testProductTab() {
         reporter.startTest("TC_SERVICE_PRODUCT_TAB", "Verifikasi Tab 'Product' Tampil");
         try {
             reporter.logStep("Verifikasi tab 'Product' tersedia di halaman Service...");
@@ -188,7 +133,10 @@ public class Service extends BasePage {
         return this;
     }
 
-    public Service testServiceBillingTab() {
+    /**
+     * TC_SERVICE_BILLING_TAB - Verifikasi tab 'Billing' tampil.
+     */
+    public Service testBillingTab() {
         reporter.startTest("TC_SERVICE_BILLING_TAB", "Verifikasi Tab 'Billing' Tampil");
         try {
             reporter.logStep("Verifikasi tab 'Billing' tersedia di halaman Service...");
@@ -202,7 +150,10 @@ public class Service extends BasePage {
         return this;
     }
 
-    public Service testServiceSearchInput() {
+    /**
+     * TC_SERVICE_SEARCH_INPUT - Verifikasi input pencarian layanan tampil.
+     */
+    public Service testSearchInput() {
         reporter.startTest("TC_SERVICE_SEARCH_INPUT", "Verifikasi Input Pencarian Layanan Tampil");
         try {
             reporter.logStep("Verifikasi field input pencarian layanan tersedia...");
@@ -216,18 +167,16 @@ public class Service extends BasePage {
         return this;
     }
 
-    public Service testServiceRequestButton() {
+    /**
+     * TC_SERVICE_REQUEST_BUTTON - Verifikasi tombol 'Request' tersedia.
+     */
+    public Service testRequestButton() {
         reporter.startTest("TC_SERVICE_REQUEST_BUTTON", "Verifikasi Tombol 'Request' Tersedia");
-        NetworkEventAnalyzer.drainLogs(driver);
+        drainLogs();
         try {
             reporter.logStep("Verifikasi tombol 'Request' tersedia di halaman Service...");
             page.verifyRequestButtonDisplayed();
-            // Inspeksi log akhir setelah semua interaksi halaman Service
-            NetworkEventAnalyzer.AnalysisResult analysis = NetworkEventAnalyzer.analyze(driver);
-            if (analysis.hasErrors()) {
-                reporter.logNetworkFail("[NETWORK ANALYSIS] Error terdeteksi pada halaman Service", analysis);
-                throw new AssertionError("[NETWORK ANALYSIS FAIL] " + analysis.buildSummary());
-            }
+            inspectNetwork("verifikasi halaman Service");
             reporter.logPass("Tombol 'Request' berhasil ditemukan di halaman Service.");
         } catch (AssertionError e) {
             throw e;

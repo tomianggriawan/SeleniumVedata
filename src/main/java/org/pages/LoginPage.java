@@ -3,6 +3,7 @@ package org.pages;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.common.BasePage;
+import org.pages.settingpage.CompanyPage;
 
 /**
  * LoginPage - Page Object Class representing the Login page of VEDATA.
@@ -147,5 +148,32 @@ public class LoginPage extends BasePage {
 
     public boolean isUrlContainingDashboard() {
         return getCurrentUrl().contains("dashboard");
+    }
+
+    private void waitForPageReady(String targetUrl, long extraSleepMs) {
+        try {
+            // Langkah 1: Periksa apakah URL masih Keycloak OAuth callback
+            Thread.sleep(1000); // beri sedikit waktu SPA memproses fragment
+            if (isKeycloakCallback()) {
+                System.out.println("  [WARN] Keycloak OAuth callback terdeteksi. Navigasi ulang ke: " + targetUrl);
+                driver.navigate().to(targetUrl);
+                Thread.sleep(2000);
+            }
+
+            // Langkah 2: Tunggu sidebar muncul (bukti sesi aktif & halaman ter-render)
+            boolean sidebarReady = isPresent(leftSidebar, 15);
+            if (!sidebarReady) {
+                System.out.println("  [WARN] Sidebar tidak muncul dalam 15 detik. URL: " + getCurrentUrl());
+            } else {
+                System.out.println("  [INFO] Sidebar terdeteksi. Halaman siap: " + getCurrentUrl());
+            }
+
+            // Langkah 3: Extra sleep agar konten halaman ter-render penuh
+            if (extraSleepMs > 0) {
+                Thread.sleep(extraSleepMs);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

@@ -27,10 +27,402 @@ import java.util.List;
  */
 public class UnitPage extends BasePage {
 
-    private static final String UNIT_TAB_URL = "https://web.vedata.id/inventory/setting?tab=unit";
+    private static final String UNIT_TAB_URL  = "https://web.vedata.id/inventory/setting?tab=unit";
+    private static final String UNIT_FORM_URL = "https://web.vedata.id/inventory/setting/unit/form";
+
+    // ==================== Locators ====================
+
+    // --- Sidebar ---
+    private final By sidebarItemMenu = By.xpath(
+        "//div[contains(@class,'leftSidebar') or contains(@class,'sidebar')]" +
+        "//a[normalize-space()='Item' or .//span[normalize-space()='Item']]" +
+        " | //nav//a[normalize-space()='Item' or .//span[normalize-space()='Item']]" +
+        " | //*[@role='navigation']//a[normalize-space()='Item' or .//span[normalize-space()='Item']]"
+    );
+
+    // --- Page Header & Tabs ---
+    private final By pageMainTitle = By.xpath(
+        "//*[contains(normalize-space(),'Unit Setting')]" +
+        "[self::h1 or self::h2 or self::h3" +
+        " or contains(@class,'page-title') or contains(@class,'header-title')]"
+    );
+    private final By tabItem     = By.xpath(
+        "//button[normalize-space()='Item']     | //a[normalize-space()='Item']" +
+        " | //*[@role='tab'][normalize-space()='Item']");
+    private final By tabUnit     = By.xpath(
+        "//button[normalize-space()='Unit']     | //a[normalize-space()='Unit']" +
+        " | //*[@role='tab'][normalize-space()='Unit']");
+    private final By tabCategory = By.xpath(
+        "//button[normalize-space()='Category'] | //a[normalize-space()='Category']" +
+        " | //*[@role='tab'][normalize-space()='Category']");
+    private final By tabOption   = By.xpath(
+        "//button[normalize-space()='Option']   | //a[normalize-space()='Option']" +
+        " | //*[@role='tab'][normalize-space()='Option']");
+
+    // --- Unit List Area ---
+    private final By unitListTitle = By.xpath(
+        "//*[contains(normalize-space(),'Unit List')]" +
+        "[self::h1 or self::h2 or self::h3 or self::h4" +
+        " or contains(@class,'title') or contains(@class,'header') or contains(@class,'page-title')]"
+    );
+    private final By addButton = By.xpath(
+        "//button[contains(@class,'bg-primary') and contains(.,'Add')]" +
+        " | //button[.//span[normalize-space()='Add']]" +
+        " | //button[normalize-space()='Add']"
+    );
+
+    // --- Add Unit Form ---
+    private final By formTitle = By.xpath(
+        "//*[contains(normalize-space(),'Add Unit')]" +
+        "[self::h1 or self::h2 or self::h3 or self::h4" +
+        " or contains(@class,'title') or contains(@class,'page-title') or contains(@class,'header')]"
+    );
+    private final By formFieldName = By.xpath(
+        "//input[@id='unit-name']" +
+        " | //label[contains(normalize-space(),'Name')]/following::input[1]" +
+        " | //input[contains(translate(@placeholder,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'name')]"
+    );
+    private final By formFieldInformation = By.xpath(
+        "//textarea[@id='unit-desc']" +
+        " | //label[contains(normalize-space(),'Information') or contains(normalize-space(),'Keterangan')]" +
+        "/following::textarea[1]" +
+        " | //textarea[contains(translate(@placeholder,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'information')]"
+    );
+    private final By formSaveButton = By.xpath(
+        "//button[contains(@class,'bg-primary')][.//span[normalize-space()='Save'] or normalize-space()='Save']" +
+        " | //button[not(@disabled)][normalize-space()='Save' or .//span[normalize-space()='Save']]"
+    );
+    private final By validationMessages = By.xpath(
+        "//*[contains(@class,'v-messages__message')]" +
+        " | //*[contains(@class,'error--text') and normalize-space() != '']" +
+        " | //*[@role='alert' and normalize-space() != '']" +
+        " | //*[contains(@class,'v-input--error')]//*[contains(@class,'v-messages')]"
+    );
+
+    // ==================== Constructor ====================
 
     public UnitPage(WebDriver driver) {
         super(driver, 20);
+    }
+
+    // ==================== Step 1: Sidebar Verification ====================
+
+    /**
+     * Verifikasi menu "Item" tampil di sidebar setelah login.
+     */
+    public UnitPage verifySidebarItemMenu() {
+        System.out.println("  [UnitPage] Verifikasi menu 'Item' di sidebar...");
+        boolean visible = isDisplayed(sidebarItemMenu, 10);
+        if (!visible) {
+            throw new AssertionError("[SIDEBAR] Menu 'Item' tidak tampil di sidebar setelah login.");
+        }
+        System.out.println("  [UnitPage] OK - Menu 'Item' tampil di sidebar.");
+        return this;
+    }
+
+    /**
+     * Klik menu "Item" di sidebar untuk navigasi ke halaman Item.
+     */
+    public UnitPage clickSidebarItemMenu() {
+        System.out.println("  [UnitPage] Klik menu 'Item' di sidebar...");
+        try {
+            WebElement menu = wait.until(ExpectedConditions.elementToBeClickable(sidebarItemMenu));
+            js.executeScript("arguments[0].click();", menu);
+            Thread.sleep(3000);
+            System.out.println("  [UnitPage] OK - Menu 'Item' diklik. URL: " + driver.getCurrentUrl());
+        } catch (Exception e) {
+            throw new AssertionError("[SIDEBAR] Gagal klik menu 'Item': " + e.getMessage(), e);
+        }
+        return this;
+    }
+
+    // ==================== Step 2: Page & Tab Validation ====================
+
+    /**
+     * Verifikasi judul halaman adalah "Unit Setting".
+     */
+    public UnitPage verifyPageTitle() {
+        System.out.println("  [UnitPage] Verifikasi judul halaman 'Unit Setting'...");
+        boolean found = isDisplayed(pageMainTitle, 10);
+        if (!found) {
+            String bodyText = (String) js.executeScript("return document.body.innerText || '';");
+            if (!bodyText.contains("Unit Setting")) {
+                throw new AssertionError(
+                    "[PAGE TITLE] 'Unit Setting' tidak ditemukan. URL: " + driver.getCurrentUrl());
+            }
+        }
+        System.out.println("  [UnitPage] OK - Judul 'Unit Setting' terverifikasi.");
+        return this;
+    }
+
+    /**
+     * Verifikasi tab navigasi: Item, Unit, Category, Option semuanya tampil.
+     */
+    public UnitPage verifySettingTabs() {
+        System.out.println("  [UnitPage] Verifikasi tab: Item / Unit / Category / Option...");
+        String[] names = {"Item", "Unit", "Category", "Option"};
+        By[]     locs  = {tabItem, tabUnit, tabCategory, tabOption};
+        for (int i = 0; i < names.length; i++) {
+            boolean ok = isPresent(locs[i], 8);
+            if (!ok) {
+                String body = (String) js.executeScript("return document.body.innerText || '';");
+                if (!body.contains(names[i])) {
+                    throw new AssertionError("[TABS] Tab '" + names[i] + "' tidak ditemukan.");
+                }
+            }
+            System.out.println("  [UnitPage] OK - Tab '" + names[i] + "' terdeteksi.");
+        }
+        return this;
+    }
+
+    /**
+     * Klik tab "Unit" — navigasi ke Unit List (via URL untuk stabilitas SPA).
+     */
+    public UnitPage clickUnitTab() {
+        System.out.println("  [UnitPage] Aktivasi tab 'Unit'...");
+        try {
+            driver.get(UNIT_TAB_URL);
+            Thread.sleep(3000);
+            System.out.println("  [UnitPage] OK - Tab Unit aktif. URL: " + driver.getCurrentUrl());
+        } catch (Exception e) {
+            throw new AssertionError("[TAB UNIT] Gagal navigasi ke tab Unit: " + e.getMessage(), e);
+        }
+        return this;
+    }
+
+    // ==================== Step 3: Unit List & Navigation ====================
+
+    /**
+     * Verifikasi sub-judul "Unit List" tampil di halaman.
+     */
+    public UnitPage verifyUnitListTitle() {
+        System.out.println("  [UnitPage] Verifikasi sub-judul 'Unit List'...");
+        boolean found = isDisplayed(unitListTitle, 8);
+        if (!found) {
+            String body = (String) js.executeScript("return document.body.innerText || '';");
+            if (!body.contains("Unit")) {
+                throw new AssertionError("[UNIT LIST] Judul 'Unit List' tidak ditemukan.");
+            }
+        }
+        System.out.println("  [UnitPage] OK - 'Unit List' terverifikasi.");
+        return this;
+    }
+
+    /**
+     * Verifikasi tombol "Add" tampil di halaman Unit List.
+     */
+    public UnitPage verifyAddButtonVisible() {
+        System.out.println("  [UnitPage] Verifikasi tombol 'Add' tampil...");
+        boolean visible = isDisplayed(addButton, 8);
+        if (!visible) {
+            throw new AssertionError("[ADD BTN] Tombol 'Add' tidak tampil di Unit List.");
+        }
+        System.out.println("  [UnitPage] OK - Tombol 'Add' tampil.");
+        return this;
+    }
+
+    /**
+     * Klik tombol Add dan tunggu halaman form Add Unit terbuka.
+     */
+    public UnitPage clickAddButtonAndWaitForm() {
+        System.out.println("  [UnitPage] Klik 'Add' dan tunggu form terbuka...");
+        try {
+            clickAddButtonRobust();
+            waitForFormPage();
+            System.out.println("  [UnitPage] OK - Form Add Unit terbuka. URL: " + driver.getCurrentUrl());
+        } catch (Exception e) {
+            throw new AssertionError("[ADD BTN] Gagal membuka form Add Unit: " + e.getMessage(), e);
+        }
+        return this;
+    }
+
+    // ==================== Step 4: Form Validation — Negative Test ====================
+
+    /**
+     * Verifikasi judul form adalah "Add Unit".
+     */
+    public UnitPage verifyFormTitle() {
+        System.out.println("  [UnitPage] Verifikasi judul form 'Add Unit'...");
+        boolean found = isDisplayed(formTitle, 8);
+        if (!found) {
+            String body = (String) js.executeScript("return document.body.innerText || '';");
+            if (!body.contains("Add Unit")) {
+                throw new AssertionError(
+                    "[FORM TITLE] 'Add Unit' tidak ditemukan. URL: " + driver.getCurrentUrl());
+            }
+        }
+        System.out.println("  [UnitPage] OK - Judul 'Add Unit' terverifikasi.");
+        return this;
+    }
+
+    /**
+     * Klik Save dengan form dalam keadaan kosong (negative test).
+     */
+    public UnitPage clickSaveEmpty() {
+        System.out.println("  [UnitPage] Klik Save (form kosong — negative test)...");
+        try {
+            WebElement saveBtn = new WebDriverWait(driver, Duration.ofSeconds(10))
+                .until(ExpectedConditions.elementToBeClickable(formSaveButton));
+            js.executeScript("arguments[0].scrollIntoView({block:'center'});", saveBtn);
+            Thread.sleep(300);
+            js.executeScript("arguments[0].click();", saveBtn);
+            Thread.sleep(1500);
+            System.out.println("  [UnitPage] OK - Save diklik (form kosong).");
+        } catch (Exception e) {
+            throw new AssertionError("[SAVE EMPTY] Gagal klik Save: " + e.getMessage(), e);
+        }
+        return this;
+    }
+
+    /**
+     * Verifikasi pesan validasi "required" muncul pada field mandatory.
+     * Mendukung Vuetify v-messages, aria[role='alert'], class error.
+     */
+    public UnitPage verifyRequiredValidationMessages() {
+        System.out.println("  [UnitPage] Verifikasi pesan validasi required field...");
+        try {
+            new WebDriverWait(driver, Duration.ofSeconds(5))
+                .until(ExpectedConditions.presenceOfElementLocated(validationMessages));
+
+            List<WebElement> messages = driver.findElements(validationMessages);
+            long visibleCount = messages.stream()
+                .filter(el -> {
+                    try { return el.isDisplayed() && !el.getText().trim().isEmpty(); }
+                    catch (Exception ignored) { return false; }
+                })
+                .count();
+
+            if (visibleCount > 0) {
+                System.out.println("  [UnitPage] OK - " + visibleCount + " pesan validasi ditemukan:");
+                messages.stream()
+                    .filter(el -> {
+                        try { return el.isDisplayed() && !el.getText().trim().isEmpty(); }
+                        catch (Exception ignored) { return false; }
+                    })
+                    .forEach(el -> System.out.println("    - " + el.getText().trim()));
+                return this;
+            }
+
+            // Fallback via JS count
+            Long jsCount = (Long) js.executeScript(
+                "var els = document.querySelectorAll(" +
+                "  '.v-messages__message, .v-input--error .v-messages, [role=\"alert\"]');" +
+                "var n=0;" +
+                "for(var i=0;i<els.length;i++){" +
+                "  if(els[i].offsetParent!==null && els[i].textContent.trim()!='') n++;" +
+                "}" +
+                "return n;"
+            );
+            if (jsCount != null && jsCount > 0) {
+                System.out.println("  [UnitPage] OK - " + jsCount + " error terdeteksi via JS.");
+                return this;
+            }
+
+            throw new AssertionError(
+                "[VALIDATION] Tidak ada pesan validasi required yang muncul setelah Save form kosong.");
+        } catch (AssertionError ae) {
+            throw ae;
+        } catch (Exception e) {
+            throw new AssertionError("[VALIDATION] Gagal verifikasi: " + e.getMessage(), e);
+        }
+    }
+
+    // ==================== Step 5: Data Input & Submission — Positive Test ====================
+
+    /**
+     * Isi field "Name" pada form dengan Vue-compatible InputEvent.
+     */
+    public UnitPage fillName(String value) {
+        System.out.println("  [UnitPage] Isi field Name: '" + value + "'...");
+        try {
+            WebElement input = new WebDriverWait(driver, Duration.ofSeconds(10))
+                .until(ExpectedConditions.presenceOfElementLocated(formFieldName));
+            js.executeScript("arguments[0].scrollIntoView({block:'center'});", input);
+            Thread.sleep(200);
+            js.executeScript(
+                "var el=arguments[0]; var v=arguments[1];" +
+                "el.focus(); el.value='';" +
+                "el.dispatchEvent(new Event('input',{bubbles:true}));" +
+                "el.value=v;" +
+                "el.dispatchEvent(new InputEvent('input',{data:v,inputType:'insertText',bubbles:true}));" +
+                "el.dispatchEvent(new Event('change',{bubbles:true}));",
+                input, value);
+            Thread.sleep(300);
+            System.out.println("  [UnitPage] OK - Name diisi: '" + value + "'.");
+        } catch (Exception e) {
+            throw new AssertionError("[FILL NAME] Gagal isi Name: " + e.getMessage(), e);
+        }
+        return this;
+    }
+
+    /**
+     * Isi field "Information" pada form. Soft-fail jika field tidak ditemukan.
+     */
+    public UnitPage fillInformation(String value) {
+        System.out.println("  [UnitPage] Isi field Information: '" + value + "'...");
+        try {
+            WebElement ta = new WebDriverWait(driver, Duration.ofSeconds(8))
+                .until(ExpectedConditions.presenceOfElementLocated(formFieldInformation));
+            js.executeScript("arguments[0].scrollIntoView({block:'center'});", ta);
+            Thread.sleep(200);
+            js.executeScript(
+                "var el=arguments[0]; var v=arguments[1];" +
+                "el.focus(); el.value='';" +
+                "el.dispatchEvent(new Event('input',{bubbles:true}));" +
+                "el.value=v;" +
+                "el.dispatchEvent(new InputEvent('input',{data:v,inputType:'insertText',bubbles:true}));" +
+                "el.dispatchEvent(new Event('change',{bubbles:true}));",
+                ta, value);
+            Thread.sleep(300);
+            System.out.println("  [UnitPage] OK - Information diisi: '" + value + "'.");
+        } catch (Exception e) {
+            System.out.println("  [WARN] Field Information tidak ditemukan atau gagal diisi: " + e.getMessage());
+        }
+        return this;
+    }
+
+    /**
+     * Klik Save setelah mengisi form, lalu tunggu redirect kembali ke Unit List.
+     */
+    public UnitPage clickSaveAndWaitList() {
+        System.out.println("  [UnitPage] Klik Save dan tunggu redirect ke list...");
+        try {
+            clickSaveButtonOnPage();
+            waitForReturnToList();
+            System.out.println("  [UnitPage] OK - Save sukses, kembali ke list. URL: " + driver.getCurrentUrl());
+        } catch (Exception e) {
+            throw new AssertionError("[SAVE] Gagal save atau redirect gagal: " + e.getMessage(), e);
+        }
+        return this;
+    }
+
+    // ==================== Step 6: Final Verification ====================
+
+    /**
+     * Verifikasi Name dan Information baru tampil di tabel.
+     *
+     * @param name        nilai Name yang dicari di tabel
+     * @param information nilai Information (null = lewati verifikasi info)
+     */
+    public UnitPage verifyUnitInTableWithData(String name, String information) {
+        System.out.println("  [UnitPage] Verifikasi akhir: '" + name + "' di tabel...");
+        boolean nameFound = isUnitInTable(name);
+        if (!nameFound) {
+            throw new AssertionError(
+                "[FINAL VERIFY] Name '" + name + "' tidak ditemukan di tabel setelah Save.");
+        }
+        System.out.println("  [UnitPage] OK - Name '" + name + "' terverifikasi di tabel.");
+
+        if (information != null && !information.isEmpty()) {
+            boolean infoFound = isUnitInTable(information);
+            if (infoFound) {
+                System.out.println("  [UnitPage] OK - Information '" + information + "' terverifikasi di tabel.");
+            } else {
+                System.out.println("  [WARN] Information '" + information
+                    + "' tidak tampil di tabel (mungkin tidak ada kolom tersebut).");
+            }
+        }
+        return this;
     }
 
     // ==================== Navigation ====================
@@ -50,9 +442,10 @@ public class UnitPage extends BasePage {
         return this;
     }
 
-    public UnitPage clickTabUnit() throws InterruptedException {
+    public UnitPage navigateToUnitTabCompat() throws InterruptedException {
         return navigateToUnitTab();
     }
+
 
     /**
      * Buat Unit baru — nama saja (backward-compat).
@@ -998,7 +1391,4 @@ public class UnitPage extends BasePage {
         fillInformationField(dialog, value);
     }
 
-    private void sleep(long ms) {
-        try { Thread.sleep(ms); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-    }
 }

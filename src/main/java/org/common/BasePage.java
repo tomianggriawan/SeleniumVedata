@@ -11,12 +11,25 @@ import org.testng.Assert;
 
 import java.time.Duration;
 import java.util.List;
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.pages.LoginPage;
+
+import static org.common.WebDriverTools.baseUrl;
+import static org.common.WebDriverTools.chrome;
 
 /**
- * BasePage - Base class untuk semua Page Object.
- * Menyediakan method reusable untuk interaksi Selenium.
+ * BasePage - Base class untuk semua Page Object dan Test Runner.
+ * Menyediakan method reusable untuk interaksi Selenium dan daur hidup testing.
  */
 public abstract class BasePage {
+
+    protected static final TestReportManager reporter = new TestReportManager();
+    protected static final String REPORT_DIR = "c:/Users/LENOVO/vedata-test/src/main/java/org/test/report";
+
 
     protected WebDriver driver;
     protected WebDriverWait wait;
@@ -616,4 +629,134 @@ public abstract class BasePage {
         }
         Thread.sleep(400);
     }
+
+    // ==================== Shared Test Runner Lifecycle & Utilities ====================
+
+    /**
+     * Sleep ringkas yang menelan InterruptedException.
+     */
+    protected void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
+     * Drain CDP logs.
+     */
+    protected void drainLogs() {
+        NetworkEventAnalyzer.drainLogs(driver);
+    }
+
+    /**
+     * Melakukan analisis network & console. Jika ada error, catat ke report & throw AssertionError.
+     */
+    protected void inspectNetwork(String stepName) {
+        reporter.logStep("[INSPEKSI] Analisis Network CDP & Console Log setelah " + stepName + " ...");
+        NetworkEventAnalyzer.AnalysisResult analysis = NetworkEventAnalyzer.analyze(driver);
+        if (analysis.hasErrors()) {
+            reporter.logNetworkFail(
+                "[NETWORK ANALYSIS] Ditemukan kegagalan sistem setelah " + stepName + " ("
+                + analysis.getErrors().size() + " error terdeteksi)", analysis);
+            throw new AssertionError("[NETWORK FAIL] " + analysis.buildSummary());
+        }
+    }
+
+    /**
+     * Menangkap error network jika skenario gagal.
+     */
+    protected void captureNetworkOnFail(String scenarioName) {
+        try {
+            NetworkEventAnalyzer.AnalysisResult analysis = NetworkEventAnalyzer.analyze(driver);
+            if (analysis.hasErrors()) {
+                reporter.logNetworkFail(
+                    "[NETWORK ANALYSIS ON FAIL - " + scenarioName + "] Detail kegagalan sistem:",
+                    analysis);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Interface fungsional untuk mendefinisikan alur pengujian.
+     */
+    @FunctionalInterface
+    public interface TestRunner {
+        void run() throws Throwable;
+    }
+
+    /**
+     * Menjalankan test suite dengan siklus hidup: setup, login, run, exception handling, report generation, dan cleanup.
+     */
+    public static void runTest(String suiteName, String reportPrefix, TestRunner testRunner) {
+        File reportDir = new File(REPORT_DIR);
+        if (!reportDir.exists()) {
+            reportDir.mkdirs();
+        }
+
+        // Hapus file laporan lama 'employee-test-report.html' jika ada di folder report
+        File oldReportInDir = new File(reportDir, "employee-test-report.html");
+        if (oldReportInDir.exists()) {
+            oldReportInDir.delete();
+            System.out.println("  [INFO] Deleted old employee-test-report.html from report directory.");
+        }
+        File oldReportInRoot = new File("c:/Users/LENOVO/vedata-test/employee-test-report.html");
+        if (oldReportInRoot.exists()) {
+            oldReportInRoot.delete();
+            System.out.println("  [INFO] Deleted old employee-test-report.html from root.");
+        }
+
+        String timestamp = new SimpleDateFormat("yyyyMMdd-HHmmss").format(new Date());
+        String reportFileName = reportPrefix + "-test-report_" + timestamp + ".html";
+        File reportFile = new File(reportDir, reportFileName);
+        String reportPath = reportFile.getAbsolutePath();
+
+        try {
+            chrome.manage().window().maximize();
+            chrome.get(baseUrl);
+            Thread.sleep(3000);
+
+            reporter.startSuite();
+            System.out.println("=================================================");
+            System.out.println("[SUITE START] " + suiteName + " Test Suite");
+            System.out.println("=================================================\n");
+
+            // Login
+            System.out.println("  [INFO] Login sebagai tomi@tester.com ...");
+            new LoginPage(chrome).login("tomi@tester.com", "1234");
+            Thread.sleep(5000);
+
+            // Bersihkan buffer log sesi login
+            NetworkEventAnalyzer.drainLogs(chrome);
+
+            // Jalankan skenario
+            testRunner.run();
+
+            System.out.println("\n========================================");
+            System.out.println("  SEMUA TEST " + suiteName.toUpperCase() + " SELESAI");
+            System.out.println("========================================");
+
+        } catch (Throwable e) {
+            System.err.println("\n!!! TEST SUITE ERROR !!!");
+            System.err.println("Message: " + e.getMessage());
+            try {
+                System.err.println("URL saat error: " + chrome.getCurrentUrl());
+                Files.writeString(
+                    Path.of("c:/Users/LENOVO/vedata-test/" + reportPrefix.toLowerCase() + "_page_source_error.html"),
+                    chrome.getPageSource()
+                );
+                System.err.println("Page source dumped ke " + reportPrefix.toLowerCase() + "_page_source_error.html");
+            } catch (Exception ex) {
+                System.err.println("Gagal dump page source: " + ex.getMessage());
+            }
+            e.printStackTrace();
+        } finally {
+            reporter.generateHtmlReport(reportPath);
+            System.out.println("\n  [REPORT] Laporan HTML disimpan di: " + reportPath);
+            chrome.quit();
+        }
+    }
 }
+

@@ -1793,7 +1793,4 @@ public class EmployeePage extends BasePage {
         } catch (Exception ignored) {}
     }
 
-    private void sleep(long millis) {
-        try { Thread.sleep(millis); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-    }
 }

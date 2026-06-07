@@ -935,14 +935,6 @@ public class JobTitlePage extends BasePage {
         }
     }
 
-    private void sleep(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
-
     /**
      * Handler untuk redirect setelah Save.
      * Jika browser terjebak di Keycloak OAuth callback, navigasi langsung ke list page.
